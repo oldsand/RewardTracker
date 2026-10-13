@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>新城消費券小助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+        }
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: white;
+            height: 100dvh;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #f8fafc;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+            transform: translateX(100%);
+            opacity: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .screen.active {
+            transform: translateX(0);
+            opacity: 1;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        .screen.main-screen {
+            transform: translateX(-20%);
+        }
+        .screen.main-screen.active {
+            transform: translateX(0);
+        }
+        .scrollable-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            overflow-x: hidden;
+        }
+        
+        .amount-radio input:checked + div {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+            transform: scale(0.95);
+        }
+
+        .swipe-item-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            margin-bottom: 0.75rem;
+            background-color: #f3f4f6;
+        }
+        .swipe-actions {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            display: flex;
+            z-index: 1;
+        }
+        .swipe-action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+            width: 70px;
+        }
+        .swipe-content {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            background-color: white;
+            transition: transform 0.25s ease-out;
+            will-change: transform;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            min-height: 76px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .swipe-content.swiping {
+            transition: none;
+        }
+        
+        .status-used, .status-expired {
+            background-color: #e5e7eb !important; 
+        }
+        .status-used .amt-text, .status-expired .amt-text, .status-expired .platform-text, .status-used .platform-text {
+            color: #9ca3af !important;
+        }
+        
+        .suggested-highlight {
+            border: 3px solid #ef4444 !important; 
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.6) !important;
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+            z-index: 10;
+            position: relative;
+        }
+
+        .view-selected-highlight {
+            border: 3px solid #10b981 !important;
+            background-color: #ecfdf5 !important;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            padding: 0;
+            overflow: hidden;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 2px solid #e5e7eb; border-radius: 50%; }
+        
+        .modal-active {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        .modal-box-active {
+            transform: scale(1) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Main Screen -->
+        <div id="screen-main" class="screen main-screen active bg-white">
+            <div class="p-4 flex justify-end">
+                <button onclick="navTo('screen-settings')" class="p-3 text-gray-500 hover:text-gray-800 transition-colors rounded-full hover:bg-gray-100">
+                    <!-- Gear SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="flex-1 flex flex-col items-center justify-center space-y-6 px-6">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800">消費獎賞小助手</h1>
+                    <p class="text-gray-500 mt-2">輕鬆記低每星期抽到嘅著數</p>
+                </div>
+
+                <button onclick="navTo('screen-view')" class="w-full py-5 bg-blue-500 text-white rounded-2xl text-2xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
+                    查看紀錄
+                </button>
+                <button onclick="navTo('screen-add')" class="w-full py-5 bg-emerald-500 text-white rounded-2xl text-2xl font-bold shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform">
+                    獲取消費券
+                </button>
+                <button onclick="navTo('screen-use')" class="w-full py-5 bg-amber-500 text-white rounded-2xl text-2xl font-bold shadow-lg shadow-amber-500/30 active:scale-95 transition-transform">
+                    使用消費券
+                </button>
+            </div>
+
+            <div class="p-4 flex justify-start">
+                <button onclick="promptClearVouchers()" class="px-5 py-3 text-red-500 font-semibold flex items-center space-x-2 active:bg-red-50 rounded-xl transition-colors">
+                    <!-- Trash SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                    </svg>
+                    <span>清除紀錄</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Screen -->
+        <div id="screen-settings" class="screen flex flex-col h-full">
+            <div class="bg-white px-4 py-4 shadow-sm flex items-center border-b border-gray-100 shrink-0">
+                <button onclick="navTo('screen-main')" class="p-2 -ml-2 text-gray-600 active:bg-gray-100 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h2 class="text-xl font-bold text-gray-800 ml-2">系統設定</h2>
+            </div>
+            
+            <div class="p-4 shrink-0 bg-gray-50 border-b border-gray-200">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-sm font-semibold text-gray-500 mb-2">新增銀行 / 平台</h3>
+                    <div class="flex gap-2">
+                        <input type="color" id="new-platform-color" value="#3b82f6" class="shrink-0 mt-1">
+                        <input type="text" id="new-platform-input" placeholder="例如：大豐銀行" class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base">
+                        <button onclick="addPlatform()" class="bg-blue-500 text-white px-4 rounded-lg font-bold active:bg-blue-600 transition-colors shrink-0">新增</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto bg-white p-4">
+                <h3 class="text-sm font-semibold text-gray-500 mb-3">現有平台清單 (點選左側更改顏色)</h3>
+                <ul id="platform-list" class="divide-y divide-gray-100 pb-20">
+                    <!-- Platforms injected here -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Add Screen (獲取) -->
+        <div id="screen-add" class="screen">
+            <div class="bg-emerald-500 px-4 py-4 shadow-sm flex justify-between items-center text-white shrink-0">
+                <div class="flex items-center">
+                    <button onclick="navTo('screen-main')" class="p-2 -ml-2 active:bg-emerald-600 rounded-full transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h2 class="text-xl font-bold ml-2">獲取消費券</h2>
+                </div>
+                <button onclick="promptNewRound()" class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-bold active:scale-95 transition-all shadow-sm">
+                    新一輪
+                </button>
+            </div>
+            
+            <div class="bg-emerald-50/50 p-2 text-center border-b border-emerald-100 shrink-0">
+                <p id="current-round-label-display" class="text-xs text-emerald-700 font-bold">當前週期：載入中...</p>
+            </div>
+
+            <div class="scrollable-content flex flex-col gap-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-emerald-500">
+                    <div class="mb-5">
+                        <label class="block text-gray-700 font-bold mb-2 text-lg">平台 (每輪每間最多3張)</label>
+                        <select id="acquire-platform" class="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-lg appearance-none">
+                            <!-- Options injected here -->
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 font-bold mb-3 text-lg">金額 (MOP)</label>
+                        <div class="grid grid-cols-3 gap-3" id="amount-options">
+                            <label class="amount-radio block cursor-pointer">
+                                <input type="radio" name="amount" value="10" class="hidden" checked>
+                                <div class="py-3 text-center border-2 border-gray-200 rounded-xl text-gray-600 font-bold text-lg bg-white transition-all duration-200">$10</div>
+                            </label>
+                            <label class="amount-radio block cursor-pointer">
+                                <input type="radio" name="amount" value="20" class="hidden">
+                                <div class="py-3 text-center border-2 border-gray-200 rounded-xl text-gray-600 font-bold text-lg bg-white transition-all duration-200">$20</div>
+                            </label>
+                            <label class="amount-radio block cursor-pointer">
+                                <input type="radio" name="amount" value="50" class="hidden">
+                                <div class="py-3 text-center border-2 border-gray-200 rounded-xl text-gray-600 font-bold text-lg bg-white transition-all duration-200">$50</div>
+                            </label>
+                            <label class="amount-radio block cursor-pointer">
+                                <input type="radio" name="amount" value="100" class="hidden">
+                                <div class="py-3 text-center border-2 border-gray-200 rounded-xl text-gray-600 font-bold text-lg bg-white transition-all duration-200">$100</div>
+                            </label>
+                            <label class="amount-radio block cursor-pointer">
+                                <input type="radio" name="amount" value="200" class="hidden">
+                                <div class="py-3 text-center border-2 border-gray-200 rounded-xl text-gray-600 font-bold text-lg bg-white transition-all duration-200">$200</div>
+                            </label>
+                        </div>
+                    </div>
+                    <button onclick="addVoucher()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl text-xl shadow-md active:scale-95 transition-transform">
+                        確認新增
+                    </button>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm mt-2 border border-gray-100">
+                    <h3 class="text-sm font-semibold text-gray-500 mb-3">剛剛新增（本次操作）</h3>
+                    <div id="session-added-list" class="space-y-2">
+                        <!-- Session added vouchers injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Screen (查看) -->
+        <div id="screen-view" class="screen">
+            <div class="bg-blue-500 px-4 py-4 shadow-sm flex items-center justify-between text-white shrink-0 z-20">
+                <div class="flex items-center">
+                    <button onclick="navTo('screen-main')" class="p-2 -ml-2 active:bg-blue-600 rounded-full transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h2 class="text-xl font-bold ml-2">查看紀錄</h2>
+                </div>
+                <button onclick="calculateSelectedViewVouchers()" class="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95 shadow-sm">
+                    <!-- Calculator SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V21m-7.5-5.25h7.5m-7.5-6h7.5m-12 18.75h16.5a2.25 2.25 0 002.25-2.25V5.25A2.25 2.25 0 0019.5 3H4.5A2.25 2.25 0 002.25 5.25v13.5A2.25 2.25 0 004.5 21z" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="bg-white p-4 shadow-sm flex justify-between text-center border-b border-gray-100 z-10 relative shrink-0">
+                <div class="flex-1">
+                    <p class="text-xs text-gray-500 font-semibold mb-1">總共抽到</p>
+                    <p id="stat-total" class="text-xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="flex-1 border-l border-r border-gray-100">
+                    <p class="text-xs text-gray-500 font-semibold mb-1">已經使用</p>
+                    <p id="stat-used" class="text-xl font-bold text-amber-500">0</p>
+                </div>
+                <div class="flex-1">
+                    <p class="text-xs text-gray-500 font-semibold mb-1">未用淨低</p>
+                    <p id="stat-remain" class="text-xl font-bold text-emerald-500">0</p>
+                </div>
+            </div>
+            
+            <div class="p-2 bg-blue-50/50 flex justify-center items-center shrink-0 border-b border-blue-100">
+                <p class="text-xs text-blue-800 flex items-center font-medium">
+                    點擊未用券可多選計算；向左滑動可操作
+                </p>
+            </div>
+
+            <div class="scrollable-content pt-3 pb-20 bg-gray-50">
+                <div id="all-vouchers-list" class="space-y-0">
+                    <!-- All vouchers injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Use Screen (使用) -->
+        <div id="screen-use" class="screen">
+            <div class="bg-amber-500 px-4 py-4 shadow-sm flex justify-between items-center text-white shrink-0">
+                <div class="flex items-center">
+                    <button onclick="navTo('screen-main')" class="p-2 -ml-2 active:bg-amber-600 rounded-full transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h2 class="text-xl font-bold ml-2">使用消費券</h2>
+                </div>
+                <button onclick="openCalcModal()" class="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95 shadow-sm relative z-50">
+                    <!-- Calculator SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V21m-7.5-5.25h7.5m-7.5-6h7.5m-12 18.75h16.5a2.25 2.25 0 002.25-2.25V5.25A2.25 2.25 0 0019.5 3H4.5A2.25 2.25 0 002.25 5.25v13.5A2.25 2.25 0 004.5 21z" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="p-3 bg-white border-b border-gray-200 shrink-0 shadow-sm relative z-10 flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <label class="text-sm font-bold text-gray-600 whitespace-nowrap w-20">篩選銀行：</label>
+                    <select id="use-bank-filter" onchange="renderUnusedVouchers()" class="flex-1 bg-gray-50 border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-medium appearance-none">
+                        <option value="all">全部銀行</option>
+                        <!-- Options injected dynamically -->
+                    </select>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="text-sm font-bold text-gray-600 whitespace-nowrap w-20">排序方式：</label>
+                    <select id="use-sort-filter" onchange="renderUnusedVouchers()" class="flex-1 bg-gray-50 border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-medium appearance-none">
+                        <option value="default">預設獲取順序</option>
+                        <option value="amount">金額由大至小</option>
+                        <option value="amountAsc">金額由小至大</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="p-2 bg-amber-50 border-b border-amber-100 shrink-0">
+                <p class="text-xs text-amber-800 font-medium text-center">點選未用券標記使用，或點右上角計算器搵最抵組合</p>
+            </div>
+
+            <div class="scrollable-content pt-4 pb-20 bg-gray-50">
+                <div id="unused-vouchers-list" class="space-y-3">
+                    <!-- Unused vouchers injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Universal Modal -->
+        <div id="universal-modal" class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-200" style="z-index: 100;">
+            <div class="bg-white w-[85%] rounded-2xl p-6 shadow-2xl transform scale-95 transition-transform duration-200" id="universal-modal-box">
+                <div class="flex justify-center mb-4" id="modal-icon-container"></div>
+                <h3 class="text-xl font-bold text-center text-gray-800 mb-2" id="modal-title">確認操作？</h3>
+                <p class="text-center text-gray-500 mb-6 text-sm" id="modal-desc">此操作無法復原。</p>
+                <div class="flex space-x-3">
+                    <button onclick="closeModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl active:bg-gray-200 transition-colors">
+                        取消
+                    </button>
+                    <button id="modal-confirm-btn" onclick="confirmModal()" class="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl active:bg-blue-600 transition-colors shadow-lg">
+                        確定
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calculator Modal (Use Screen) -->
+        <div id="calc-modal" class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-200" style="z-index: 110;">
+            <div class="bg-white w-[90%] rounded-2xl p-6 shadow-2xl transform scale-95 transition-transform duration-200" id="calc-modal-box">
+                <div class="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
+                    <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V21m-7.5-5.25h7.5m-7.5-6h7.5m-12 18.75h16.5a2.25 2.25 0 002.25-2.25V5.25A2.25 2.25 0 0019.5 3H4.5A2.25 2.25 0 002.25 5.25v13.5A2.25 2.25 0 004.5 21z" />
+                        </svg>
+                        智能消費計算機
+                    </h3>
+                    <button onclick="closeCalcModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-full bg-gray-50 active:bg-gray-200">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                
+                <div class="mb-2">
+                    <label class="block text-gray-700 font-bold mb-3 text-sm">請輸入預計消費金額 (MOP)</label>
+                    <input type="number" id="calc-input" placeholder="例如: 150" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-2xl text-center font-bold focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 shadow-inner">
+                    <p class="text-xs text-gray-500 mt-3 text-center">系統會喺當前列表幫你圈出最抵用嘅組合！<br/>(規則：每用$10券需消費$30)</p>
+                </div>
+
+                <div class="mt-6">
+                    <button onclick="calculateAndHighlight()" class="w-full py-4 bg-red-500 text-white font-bold rounded-xl active:bg-red-600 transition-colors shadow-lg text-lg tracking-wide">
+                        計計佢，幫我圈出嚟！
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Toast Notification -->
+        <div id="toast" class="absolute top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg font-medium transition-all duration-300 opacity-0 -translate-y-4 pointer-events-none text-center min-w-[200px]" style="z-index: 200;">
+            Notification
+        </div>
+
+    </div>
+
+    <script>
+        const defaultPlatformData = [
+            { name: "中銀", color: "#e31837" }, 
+            { name: "工銀", color: "#c60000" }, 
+            { name: "MPay", color: "#f58220" }, 
+            { name: "支付寶", color: "#00a3fe" }, 
+            { name: "豐付寶", color: "#FFC107" }  
+        ];
+        
+        let state = {
+            platforms: [],
+            vouchers: [], 
+            sessionAdded: [],
+            settings: { roundStartDay: 5 }
+        };
+
+        let modalConfirmCallback = null;
+        
+        // Swipe mechanics
+        let swipeState = { startX: 0, currentX: 0, activeElement: null, actionWidth: 0, isSwiping: false, openItemId: null };
+        let isSwipingMotion = false;
+        
+        // View screen selection
+        let viewSelectedIds = new Set();
+
+        function initData() {
+            const savedPlatforms = localStorage.getItem('macau_platforms');
+            if (savedPlatforms) {
+                try {
+                    let parsed = JSON.parse(savedPlatforms);
+                    if (parsed.length > 0 && typeof parsed[0] === 'string') {
+                        state.platforms = parsed.map(name => {
+                            const found = defaultPlatformData.find(d => d.name === name);
+                            return { name: name, color: found ? found.color : '#3b82f6' };
+                        });
+                    } else { state.platforms = parsed; }
+                } catch(e) { state.platforms = JSON.parse(JSON.stringify(defaultPlatformData)); }
+            } else { state.platforms = JSON.parse(JSON.stringify(defaultPlatformData)); }
+
+            const savedVouchers = localStorage.getItem('macau_vouchers');
+            if (savedVouchers) state.vouchers = JSON.parse(savedVouchers);
+
+            const savedSettings = localStorage.getItem('macau_settings');
+            if (savedSettings) state.settings = JSON.parse(savedSettings);
+
+            saveData();
+        }
+
+        function saveData() {
+            localStorage.setItem('macau_platforms', JSON.stringify(state.platforms));
+            localStorage.setItem('macau_vouchers', JSON.stringify(state.vouchers));
+            localStorage.setItem('macau_settings', JSON.stringify(state.settings));
+        }
+
+        function getPlatformColor(name) {
+            const p = state.platforms.find(x => x.name === name);
+            return p ? p.color : '#3b82f6';
+        }
+
+        function getCurrentRoundRange() {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const currentDay = now.getDay();
+            const startDay = parseInt(state.settings.roundStartDay) || 5; 
+            
+            let diff = currentDay >= startDay ? currentDay - startDay : currentDay + 7 - startDay;
+            
+            const startDate = new Date(now);
+            startDate.setDate(now.getDate() - diff);
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            
+            const formatDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            return `${formatDate(startDate)} 至 ${formatDate(endDate)}`;
+        }
+
+        function navTo(screenId) {
+            resetSwipe();
+            viewSelectedIds.clear();
+            document.querySelectorAll('.suggested-highlight').forEach(el => el.classList.remove('suggested-highlight'));
+            
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+
+            if (screenId === 'screen-settings') renderPlatforms();
+            if (screenId === 'screen-add') {
+                state.sessionAdded = []; 
+                populatePlatformSelect(); 
+                renderSessionAdded();
+                document.getElementById('current-round-label-display').textContent = `當前週期：${getCurrentRoundRange()}`;
+            }
+            if (screenId === 'screen-view') renderViewList();
+            if (screenId === 'screen-use') {
+                populateUseBankFilter();
+                renderUnusedVouchers();
+            }
+        }
+
+        function showToast(msg, type="success") {
+            const toast = document.getElementById('toast');
+            toast.className = `absolute top-10 left-1/2 transform -translate-x-1/2 ${type === 'error' ? 'bg-red-500' : 'bg-gray-800'} text-white px-6 py-3 rounded-full shadow-lg font-medium transition-all duration-300 pointer-events-none text-center min-w-[200px]`;
+            toast.textContent = msg;
+            toast.style.zIndex = '200';
+            requestAnimationFrame(() => {
+                toast.classList.remove('opacity-0', '-translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+            });
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-4');
+            }, 2500);
+        }
+
+        function openModal({ title, desc, iconType, confirmBtnText, confirmBtnClass, onConfirm }) {
+            document.getElementById('modal-title').innerHTML = title;
+            document.getElementById('modal-desc').innerHTML = desc;
+            const btn = document.getElementById('modal-confirm-btn');
+            btn.textContent = confirmBtnText;
+            btn.className = `flex-1 py-3 text-white font-bold rounded-xl transition-colors shadow-lg ${confirmBtnClass}`;
+            
+            const iconContainer = document.getElementById('modal-icon-container');
+            if (iconType === 'danger') iconContainer.innerHTML = `<div class="bg-red-100 p-3 rounded-full text-red-500"><svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>`;
+            else if (iconType === 'warning') iconContainer.innerHTML = `<div class="bg-amber-100 p-3 rounded-full text-amber-500"><svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>`;
+            else iconContainer.innerHTML = `<div class="bg-blue-100 p-3 rounded-full text-blue-500"><svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg></div>`;
+
+            modalConfirmCallback = onConfirm;
+            const modal = document.getElementById('universal-modal');
+            const modalBox = document.getElementById('universal-modal-box');
+            modal.classList.add('modal-active');
+            modalBox.classList.add('modal-box-active');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('universal-modal');
+            const modalBox = document.getElementById('universal-modal-box');
+            modal.classList.remove('modal-active');
+            modalBox.classList.remove('modal-box-active');
+            modalConfirmCallback = null;
+        }
+
+        function confirmModal() {
+            if (modalConfirmCallback) modalConfirmCallback();
+            closeModal();
+        }
+
+        function renderPlatforms() {
+            const list = document.getElementById('platform-list');
+            list.innerHTML = '';
+            if (state.platforms.length === 0) {
+                list.innerHTML = '<li class="py-4 text-center text-gray-400">暫無平台</li>'; return;
+            }
+            state.platforms.forEach((platform, index) => {
+                list.innerHTML += `
+                    <li class="py-3 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <input type="color" value="${platform.color}" onchange="updatePlatformColor(${index}, this.value)" class="focus:outline-none shadow-sm">
+                            <span class="font-bold text-gray-700 text-lg">${platform.name}</span>
+                        </div>
+                        <button onclick="deletePlatform(${index})" class="p-2 text-red-400 hover:text-red-600 rounded-lg bg-red-50 active:bg-red-100 transition-colors">
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </li>`;
+            });
+        }
+
+        function addPlatform() {
+            const val = document.getElementById('new-platform-input').value.trim();
+            const color = document.getElementById('new-platform-color').value;
+            if (val && !state.platforms.find(p => p.name === val)) {
+                state.platforms.push({ name: val, color: color }); 
+                saveData(); renderPlatforms();
+                document.getElementById('new-platform-input').value = '';
+                showToast(`已新增 ${val}`);
+            } else if (state.platforms.find(p => p.name === val)) {
+                showToast("銀行已存在", "error");
+            }
+        }
+        
+        function updatePlatformColor(index, color) { state.platforms[index].color = color; saveData(); }
+        function deletePlatform(index) { state.platforms.splice(index, 1); saveData(); renderPlatforms(); }
+
+        function promptClearVouchers() {
+            openModal({
+                title: "確認清除所有紀錄？",
+                desc: "將會刪除所有獲取及使用紀錄，但會保留你設定嘅銀行清單。",
+                iconType: "danger", confirmBtnText: "確認清除", confirmBtnClass: "bg-red-500",
+                onConfirm: () => {
+                    state.vouchers = []; state.sessionAdded = []; saveData(); showToast("紀錄已清除", "success");
+                }
+            });
+        }
+
+        function populatePlatformSelect() {
+            const select = document.getElementById('acquire-platform');
+            select.innerHTML = '';
+            state.platforms.forEach(p => select.innerHTML += `<option value="${p.name}">${p.name}</option>`);
+        }
+
+        function addVoucher() {
+            const platformName = document.getElementById('acquire-platform').value;
+            const amountRadio = document.querySelector('input[name="amount"]:checked');
+            if (!platformName || !amountRadio) { showToast("請選擇平台及金額", "error"); return; }
+
+            const currentRound = getCurrentRoundRange();
+            const activeBankVouchers = state.vouchers.filter(v => 
+                v.platform === platformName && v.roundLabel === currentRound && v.status !== 'expired'
+            );
+
+            if (activeBankVouchers.length >= 3) {
+                openModal({
+                    title: "超出限制！", desc: `呢間銀行（${platformName}）今期已經有3張啦，無得再加！`,
+                    iconType: "warning", confirmBtnText: "明白", confirmBtnClass: "bg-blue-500 shadow-blue-500/30", onConfirm: () => {}
+                });
+                return;
+            }
+
+            const newVoucher = { id: 'v_' + Date.now(), platform: platformName, amount: parseInt(amountRadio.value), status: 'unused', roundLabel: currentRound, date: new Date().toISOString() };
+            state.vouchers.push(newVoucher); state.sessionAdded.unshift(newVoucher); 
+            saveData(); renderSessionAdded(); showToast("新增成功！", "success");
+        }
+
+        function renderSessionAdded() {
+            const list = document.getElementById('session-added-list');
+            if (state.sessionAdded.length === 0) { list.innerHTML = '<p class="text-gray-400 italic text-center py-4">暫未有新增紀錄</p>'; return; }
+            list.innerHTML = '';
+            state.sessionAdded.forEach(v => {
+                const color = getPlatformColor(v.platform);
+                list.innerHTML += `
+                    <div class="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border border-emerald-100 animate-[pulse_1s_ease-out]" style="border-left: 6px solid ${color}">
+                        <span class="font-bold text-gray-800">${v.platform} <span class="text-xs text-gray-500 ml-1 font-normal block">${v.roundLabel}</span></span>
+                        <span class="font-bold text-emerald-600 text-lg">MOP ${v.amount}</span>
+                    </div>`;
+            });
+        }
+
+        function promptNewRound() {
+            const hasUnused = state.vouchers.some(v => v.status === 'unused');
+            if (hasUnused) {
+                openModal({
+                    title: "仲有消費券未用喎！", desc: "確認開啟新一輪？未用嘅消費券會全部變為「💸 失效」。",
+                    iconType: "warning", confirmBtnText: "確認開啟", confirmBtnClass: "bg-amber-500",
+                    onConfirm: () => {
+                        state.vouchers.forEach(v => { if (v.status === 'unused') v.status = 'expired'; });
+                        saveData(); showToast("舊券已設為失效，新一輪開始！");
+                    }
+                });
+            } else { showToast("當前無未用消費券，可直接繼續", "success"); }
+        }
+
+        function handleTouchStart(e, id) {
+            isSwipingMotion = false;
+            if (swipeState.openItemId && swipeState.openItemId !== id) resetSwipe();
+            swipeState.startX = e.touches[0].clientX; 
+            swipeState.activeElement = e.currentTarget;
+            swipeState.isSwiping = true; 
+            swipeState.activeElement.classList.add('swiping');
+            const actions = swipeState.activeElement.previousElementSibling;
+            swipeState.actionWidth = actions ? actions.offsetWidth : 0;
+        }
+
+        function handleTouchMove(e) {
+            if (!swipeState.isSwiping || !swipeState.activeElement) return;
+            const deltaX = e.touches[0].clientX - swipeState.startX;
+            if (Math.abs(deltaX) > 10) isSwipingMotion = true;
+
+            let translateX = swipeState.openItemId === swipeState.activeElement.dataset.id ? 
+                Math.max(-swipeState.actionWidth, Math.min(0, -swipeState.actionWidth + deltaX)) : Math.max(-swipeState.actionWidth, Math.min(0, deltaX));
+            
+            if (Math.abs(deltaX) > 10 && e.cancelable) e.preventDefault(); 
+            swipeState.activeElement.style.transform = `translateX(${translateX}px)`;
+        }
+
+        function handleTouchEnd(e) {
+            if (!swipeState.isSwiping || !swipeState.activeElement) return;
+            swipeState.isSwiping = false; 
+            const el = swipeState.activeElement; 
+            el.classList.remove('swiping');
+            const style = window.getComputedStyle(el);
+            const matrix = new DOMMatrixReadOnly(style.transform);
+            const currentTranslateX = matrix.m41;
+            
+            if (currentTranslateX < -swipeState.actionWidth / 2) {
+                el.style.transform = `translateX(-${swipeState.actionWidth}px)`; 
+                swipeState.openItemId = el.dataset.id;
+            } else {
+                el.style.transform = `translateX(0px)`; 
+                swipeState.openItemId = null;
+            }
+            swipeState.activeElement = null;
+        }
+
+        function resetSwipe() {
+            if (swipeState.openItemId) {
+                const el = document.querySelector(`.swipe-content[data-id="${swipeState.openItemId}"]`);
+                if (el) el.style.transform = `translateX(0px)`; swipeState.openItemId = null;
+            }
+        }
+
+        function handleViewItemTap(id) {
+            if (isSwipingMotion) return;
+            if (swipeState.openItemId === id) { resetSwipe(); return; }
+            if (swipeState.openItemId) { resetSwipe(); return; }
+
+            const v = state.vouchers.find(x => x.id === id);
+            if (v && v.status === 'unused') {
+                if (viewSelectedIds.has(id)) viewSelectedIds.delete(id);
+                else viewSelectedIds.add(id);
+                renderViewList();
+            }
+        }
+
+        function calculateSelectedViewVouchers() {
+            if (viewSelectedIds.size === 0) {
+                showToast("請先點選未用嘅消費券！", "error"); return;
+            }
+            let sum = 0;
+            viewSelectedIds.forEach(id => {
+                const v = state.vouchers.find(x => x.id === id);
+                if(v) sum += v.amount;
+            });
+            const reqSpend = sum * 3;
+
+            openModal({
+                title: "反向計算結果", 
+                desc: `為咗用齊你揀嗰 ${viewSelectedIds.size} 張消費券（總值 $${sum}），<br/><br/><span class="text-2xl font-bold text-emerald-600">你需要消費至少 $${reqSpend} 元</span>`,
+                iconType: "info", confirmBtnText: "明白", confirmBtnClass: "bg-blue-500",
+                onConfirm: () => { viewSelectedIds.clear(); renderViewList(); }
+            });
+        }
+
+        function promptDelete(id) {
+            openModal({
+                title: "確認刪除？", desc: "呢張消費券紀錄會被永久刪除。",
+                iconType: "danger", confirmBtnText: "刪除", confirmBtnClass: "bg-red-500",
+                onConfirm: () => { state.vouchers = state.vouchers.filter(v => v.id !== id); saveData(); renderViewList(); showToast("已刪除紀錄"); }
+            });
+        }
+        
+        function promptUnuse(id) {
+            openModal({
+                title: "取消使用？", desc: "呢張消費券會變返「未使用」狀態。",
+                iconType: "warning", confirmBtnText: "取消使用", confirmBtnClass: "bg-amber-500",
+                onConfirm: () => { const v = state.vouchers.find(v => v.id === id); if(v) v.status = 'unused'; saveData(); renderViewList(); showToast("已變更為未使用"); }
+            });
+        }
+
+        function renderViewList() {
+            let total = 0, usedAmt = 0;
+            state.vouchers.forEach(v => {
+                if (v.status !== 'expired') total += v.amount;
+                if (v.status === 'used') usedAmt += v.amount;
+            });
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-used').textContent = usedAmt;
+            document.getElementById('stat-remain').textContent = total - usedAmt;
+
+            const list = document.getElementById('all-vouchers-list');
+            list.innerHTML = ''; swipeState.openItemId = null;
+            if (state.vouchers.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">暫時未有紀錄</div>'; return; }
+
+            const order = { 'unused': 1, 'used': 2, 'expired': 2 };
+            const sorted = [...state.vouchers].sort((a, b) => {
+                if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+                return new Date(b.date) - new Date(a.date);
+            });
+
+            sorted.forEach(v => {
+                let actionsHTML = '';
+                if (v.status === 'used') {
+                    actionsHTML += `<button onclick="promptUnuse('${v.id}')" class="swipe-action-btn bg-amber-500 hover:bg-amber-600"><svg class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>取消</button>`;
+                }
+                actionsHTML += `<button onclick="promptDelete('${v.id}')" class="swipe-action-btn bg-red-500 hover:bg-red-600"><svg class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>刪除</button>`;
+
+                let contentClass = 'swipe-content flex flex-col justify-center cursor-pointer ';
+                if (viewSelectedIds.has(v.id)) contentClass += 'view-selected-highlight ';
+                
+                let badge = '', amountStyle = 'text-gray-800 amt-text', platformStyle = 'text-gray-800 platform-text', borderStyle = `border-left: 6px solid ${getPlatformColor(v.platform)}`;
+                
+                if (v.status === 'unused') {
+                    contentClass += 'bg-white';
+                } else if (v.status === 'used') {
+                    contentClass += 'status-used';
+                    badge = '<span class="text-[10px] bg-white text-gray-600 px-2 py-0.5 rounded-full font-bold ml-2 shadow-sm">✓ 已使用</span>';
+                    platformStyle = 'text-gray-500 platform-text';
+                } else {
+                    contentClass += 'status-expired';
+                    badge = '<span class="text-[10px] bg-white text-gray-500 px-2 py-0.5 rounded-full font-bold ml-2 shadow-sm">💸 失效</span>';
+                    amountStyle = 'text-gray-400 line-through amt-text';
+                    platformStyle = 'text-gray-500 platform-text';
+                }
+
+                list.innerHTML += `
+                    <div class="swipe-item-container">
+                        <div class="swipe-actions">${actionsHTML}</div>
+                        <div class="${contentClass}" data-id="${v.id}" style="${borderStyle}"
+                             ontouchstart="handleTouchStart(event, '${v.id}')"
+                             ontouchmove="handleTouchMove(event)"
+                             ontouchend="handleTouchEnd(event)"
+                             onclick="handleViewItemTap('${v.id}')">
+                            <div class="flex justify-between items-center w-full pointer-events-none">
+                                <div>
+                                    <div class="flex items-center">
+                                        <span class="font-bold text-lg ${platformStyle}">${v.platform}</span>
+                                        ${badge}
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">${v.roundLabel}</p>
+                                </div>
+                                <div class="font-bold text-2xl ${amountStyle}">$${v.amount}</div>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function populateUseBankFilter() {
+            const select = document.getElementById('use-bank-filter');
+            select.innerHTML = '<option value="all">全部銀行</option>';
+            state.platforms.forEach(p => select.innerHTML += `<option value="${p.name}">${p.name}</option>`);
+        }
+
+        function renderUnusedVouchers() {
+            const list = document.getElementById('unused-vouchers-list');
+            const filterBank = document.getElementById('use-bank-filter').value;
+            const sortMode = document.getElementById('use-sort-filter').value;
+            
+            let unused = state.vouchers.filter(v => v.status === 'unused');
+            if (filterBank !== 'all') { unused = unused.filter(v => v.platform === filterBank); }
+            
+            // Implementing Sort logic (Default, Descending, Ascending)
+            if (sortMode === 'amount') {
+                unused.sort((a, b) => b.amount - a.amount);
+            } else if (sortMode === 'amountAsc') {
+                unused.sort((a, b) => a.amount - b.amount);
+            } else {
+                // Default: Newest first based on date acquired
+                unused.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }
+
+            list.innerHTML = '';
+            if (unused.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">當前無未用消費券</div>'; return; }
+
+            unused.forEach(v => {
+                const color = getPlatformColor(v.platform);
+                list.innerHTML += `
+                    <div class="use-item bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center active:scale-95 transition-all cursor-pointer" 
+                         data-id="${v.id}"
+                         style="border-left: 6px solid ${color}"
+                         onclick="markAsUsed('${v.id}')">
+                        <div>
+                            <span class="font-bold text-lg text-gray-800">${v.platform}</span>
+                            <p class="text-xs text-gray-400 mt-1">${v.roundLabel}</p>
+                        </div>
+                        <div class="font-bold text-2xl text-amber-500">$${v.amount}</div>
+                    </div>`;
+            });
+        }
+
+        function markAsUsed(id) {
+            openModal({
+                title: "確認使用？", desc: "標記為已使用後，會從呢個列表消失。",
+                iconType: "warning", confirmBtnText: "確認使用", confirmBtnClass: "bg-amber-500",
+                onConfirm: () => {
+                    const v = state.vouchers.find(v => v.id === id);
+                    if (v) v.status = 'used';
+                    saveData(); renderUnusedVouchers(); showToast("已標記為使用！", "success");
+                }
+            });
+        }
+
+        function openCalcModal() {
+            document.getElementById('calc-input').value = '';
+            const modal = document.getElementById('calc-modal');
+            const modalBox = document.getElementById('calc-modal-box');
+            modal.classList.add('modal-active');
+            modalBox.classList.add('modal-box-active');
+        }
+
+        function closeCalcModal() {
+            const modal = document.getElementById('calc-modal');
+            const modalBox = document.getElementById('calc-modal-box');
+            modal.classList.remove('modal-active');
+            modalBox.classList.remove('modal-box-active');
+        }
+
+        function calculateAndHighlight() {
+            const inputVal = document.getElementById('calc-input').value;
+            const spendAmount = parseFloat(inputVal);
+            
+            if (isNaN(spendAmount) || spendAmount <= 0) { showToast("請輸入有效嘅消費金額", "error"); return; }
+            closeCalcModal();
+            const maxCapacity = Math.floor(spendAmount / 3);
+            
+            const filterBank = document.getElementById('use-bank-filter').value;
+            const sortMode = document.getElementById('use-sort-filter').value;
+            let availableVouchers = state.vouchers.filter(v => v.status === 'unused');
+            if (filterBank !== 'all') availableVouchers = availableVouchers.filter(v => v.platform === filterBank);
+            
+            // Respect visual ordering for DP index logic
+            if (sortMode === 'amount') availableVouchers.sort((a, b) => b.amount - a.amount);
+            else if (sortMode === 'amountAsc') availableVouchers.sort((a, b) => a.amount - b.amount);
+            else availableVouchers.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (availableVouchers.length === 0) { showToast("無未用嘅消費券可以計！", "error"); return; }
+            document.querySelectorAll('.use-item').forEach(el => el.classList.remove('suggested-highlight'));
+
+            let n = availableVouchers.length;
+            let dp = Array(maxCapacity + 1).fill(0);
+            let keep = Array(n).fill(0).map(() => Array(maxCapacity + 1).fill(false));
+
+            for (let i = 0; i < n; i++) {
+                let v = availableVouchers[i].amount;
+                for (let w = maxCapacity; w >= v; w--) {
+                    if (dp[w - v] + v > dp[w]) {
+                        dp[w] = dp[w - v] + v;
+                        keep[i][w] = true;
+                    }
+                }
+            }
+
+            let bestSum = dp[maxCapacity];
+            if (bestSum === 0) { showToast(`最少要消費 $${Math.min(...availableVouchers.map(v=>v.amount))*3} 先用得！`, "error"); return; }
+
+            let selectedIds = [];
+            let currW = maxCapacity;
+            for (let i = n - 1; i >= 0; i--) {
+                if (keep[i][currW]) {
+                    selectedIds.push(availableVouchers[i].id);
+                    currW -= availableVouchers[i].amount;
+                }
+            }
+
+            selectedIds.forEach(id => {
+                const el = document.querySelector(`.use-item[data-id="${id}"]`);
+                if (el) el.classList.add('suggested-highlight');
+            });
+            showToast(`幫你搵到最抵組合：用 $${bestSum} 優惠券！`, "success");
+        }
+
+        window.addEventListener('DOMContentLoaded', initData);
+
+    </script>
+</body>
+</html>
