@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="消費小助手">
+    
     <title>新城消費券小助手</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -57,6 +62,7 @@
             overflow-x: hidden;
         }
         
+        /* Radio Button Styling */
         .amount-radio input:checked + div {
             background-color: #10b981;
             color: white;
@@ -64,6 +70,7 @@
             transform: scale(0.95);
         }
 
+        /* Swipe Actions Styling */
         .swipe-item-container {
             position: relative;
             overflow: hidden;
@@ -105,6 +112,7 @@
             transition: none;
         }
         
+        /* Status Styling */
         .status-used, .status-expired {
             background-color: #e5e7eb !important; 
         }
@@ -112,6 +120,7 @@
             color: #9ca3af !important;
         }
         
+        /* Highlights */
         .suggested-highlight {
             border: 3px solid #ef4444 !important; 
             box-shadow: 0 0 12px rgba(239, 68, 68, 0.6) !important;
@@ -126,6 +135,7 @@
             background-color: #ecfdf5 !important;
         }
 
+        /* Color Input Styling */
         input[type="color"] {
             -webkit-appearance: none;
             border: none;
@@ -139,6 +149,7 @@
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: 2px solid #e5e7eb; border-radius: 50%; }
         
+        /* Modal Transitions */
         .modal-active {
             opacity: 1 !important;
             pointer-events: auto !important;
@@ -151,11 +162,17 @@
 <body>
     <div class="app-container">
         
-        <!-- Main Screen -->
         <div id="screen-main" class="screen main-screen active bg-white">
-            <div class="p-4 flex justify-end">
-                <button onclick="navTo('screen-settings')" class="p-3 text-gray-500 hover:text-gray-800 transition-colors rounded-full hover:bg-gray-100">
-                    <!-- Gear SVG -->
+            <div class="p-4 flex justify-between items-center shrink-0">
+                <!-- Install Button (Top Left) -->
+                <button onclick="promptInstall()" class="p-3 text-gray-500 hover:text-blue-600 transition-colors rounded-full hover:bg-gray-100 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                </button>
+                
+                <!-- Settings Button (Top Right) -->
+                <button onclick="navTo('screen-settings')" class="p-3 text-gray-500 hover:text-gray-800 transition-colors rounded-full hover:bg-gray-100 flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -163,35 +180,47 @@
                 </button>
             </div>
             
-            <div class="flex-1 flex flex-col items-center justify-center space-y-6 px-6">
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl font-bold text-gray-800">消費獎賞小助手</h1>
-                    <p class="text-gray-500 mt-2">輕鬆記低每星期抽到嘅著數</p>
+            <div class="flex-1 flex flex-col justify-start pt-2 px-6">
+                <div class="text-center mb-4">
+                    <h1 class="text-3xl font-bold text-gray-800 tracking-tight">消費獎賞小助手</h1>
                 </div>
 
-                <button onclick="navTo('screen-view')" class="w-full py-5 bg-blue-500 text-white rounded-2xl text-2xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
-                    查看紀錄
-                </button>
-                <button onclick="navTo('screen-add')" class="w-full py-5 bg-emerald-500 text-white rounded-2xl text-2xl font-bold shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform">
-                    獲取消費券
-                </button>
-                <button onclick="navTo('screen-use')" class="w-full py-5 bg-amber-500 text-white rounded-2xl text-2xl font-bold shadow-lg shadow-amber-500/30 active:scale-95 transition-transform">
-                    使用消費券
-                </button>
+                <!-- Dashboard Card -->
+                <div class="bg-blue-50/70 p-4 rounded-2xl mb-6 border border-blue-100 shadow-sm w-full">
+                    <div class="flex justify-between items-end mb-2">
+                        <p class="text-sm text-gray-500 font-bold">目前剩餘總額</p>
+                    </div>
+                    <p class="text-3xl font-black text-blue-600 mb-3" id="dash-total">$0</p>
+                    <div class="flex flex-wrap gap-2" id="dash-breakdown">
+                        <!-- Breakdown pills injected here -->
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="w-full space-y-4">
+                    <button onclick="navTo('screen-view')" class="w-full py-4 bg-blue-500 text-white rounded-2xl text-xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-transform flex justify-center items-center gap-2">
+                        查看紀錄
+                    </button>
+                    <button onclick="navTo('screen-add')" class="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xl font-bold shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform flex justify-center items-center gap-2">
+                        獲取消費券
+                    </button>
+                    <button onclick="navTo('screen-use')" class="w-full py-4 bg-amber-500 text-white rounded-2xl text-xl font-bold shadow-lg shadow-amber-500/30 active:scale-95 transition-transform flex justify-center items-center gap-2">
+                        使用消費券
+                    </button>
+                </div>
             </div>
 
-            <div class="p-4 flex justify-start">
-                <button onclick="promptClearVouchers()" class="px-5 py-3 text-red-500 font-semibold flex items-center space-x-2 active:bg-red-50 rounded-xl transition-colors">
-                    <!-- Trash SVG -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <!-- Clear Button -->
+            <div class="p-3 flex justify-start shrink-0">
+                <button onclick="promptClearVouchers()" class="px-4 py-2 text-red-500 font-semibold flex items-center space-x-2 active:bg-red-50 rounded-xl transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                     </svg>
-                    <span>清除紀錄</span>
+                    <span class="text-sm">清除紀錄</span>
                 </button>
             </div>
         </div>
 
-        <!-- Settings Screen -->
         <div id="screen-settings" class="screen flex flex-col h-full">
             <div class="bg-white px-4 py-4 shadow-sm flex items-center border-b border-gray-100 shrink-0">
                 <button onclick="navTo('screen-main')" class="p-2 -ml-2 text-gray-600 active:bg-gray-100 rounded-full">
@@ -221,7 +250,6 @@
             </div>
         </div>
 
-        <!-- Add Screen (獲取) -->
         <div id="screen-add" class="screen">
             <div class="bg-emerald-500 px-4 py-4 shadow-sm flex justify-between items-center text-white shrink-0">
                 <div class="flex items-center">
@@ -288,7 +316,6 @@
             </div>
         </div>
 
-        <!-- View Screen (查看) -->
         <div id="screen-view" class="screen">
             <div class="bg-blue-500 px-4 py-4 shadow-sm flex items-center justify-between text-white shrink-0 z-20">
                 <div class="flex items-center">
@@ -300,7 +327,6 @@
                     <h2 class="text-xl font-bold ml-2">查看紀錄</h2>
                 </div>
                 <button onclick="calculateSelectedViewVouchers()" class="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95 shadow-sm">
-                    <!-- Calculator SVG -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V21m-7.5-5.25h7.5m-7.5-6h7.5m-12 18.75h16.5a2.25 2.25 0 002.25-2.25V5.25A2.25 2.25 0 0019.5 3H4.5A2.25 2.25 0 002.25 5.25v13.5A2.25 2.25 0 004.5 21z" />
                     </svg>
@@ -335,7 +361,6 @@
             </div>
         </div>
 
-        <!-- Use Screen (使用) -->
         <div id="screen-use" class="screen">
             <div class="bg-amber-500 px-4 py-4 shadow-sm flex justify-between items-center text-white shrink-0">
                 <div class="flex items-center">
@@ -347,7 +372,6 @@
                     <h2 class="text-xl font-bold ml-2">使用消費券</h2>
                 </div>
                 <button onclick="openCalcModal()" class="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95 shadow-sm relative z-50">
-                    <!-- Calculator SVG -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V21m-7.5-5.25h7.5m-7.5-6h7.5m-12 18.75h16.5a2.25 2.25 0 002.25-2.25V5.25A2.25 2.25 0 0019.5 3H4.5A2.25 2.25 0 002.25 5.25v13.5A2.25 2.25 0 004.5 21z" />
                     </svg>
@@ -359,7 +383,6 @@
                     <label class="text-sm font-bold text-gray-600 whitespace-nowrap w-20">篩選銀行：</label>
                     <select id="use-bank-filter" onchange="renderUnusedVouchers()" class="flex-1 bg-gray-50 border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-medium appearance-none">
                         <option value="all">全部銀行</option>
-                        <!-- Options injected dynamically -->
                     </select>
                 </div>
                 <div class="flex items-center gap-3">
@@ -453,13 +476,46 @@
         };
 
         let modalConfirmCallback = null;
+        let deferredPrompt = null;
         
-        // Swipe mechanics
         let swipeState = { startX: 0, currentX: 0, activeElement: null, actionWidth: 0, isSwiping: false, openItemId: null };
         let isSwipingMotion = false;
-        
-        // View screen selection
         let viewSelectedIds = new Set();
+
+        // Dynamically create manifest for PWA support in a single file
+        const manifestData = {
+            "name": "消費獎賞小助手",
+            "short_name": "消費小助手",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#ffffff",
+            "theme_color": "#3b82f6",
+            "icons": [{
+                "src": "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%233b82f6'/%3E%3Ctext x='50' y='68' font-size='50' fill='white' text-anchor='middle' font-family='sans-serif' font-weight='bold'%3E%24%3C/text%3E%3C/svg%3E",
+                "sizes": "192x192",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+            }]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(manifestBlob);
+        const manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = manifestURL;
+        document.head.appendChild(manifestLink);
+
+        // Dynamically register a dummy Service Worker to trigger beforeinstallprompt
+        const swCode = "self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => self.clients.claim()); self.addEventListener('fetch', e => {});";
+        const swBlob = new Blob([swCode], {type: 'application/javascript'});
+        const swURL = URL.createObjectURL(swBlob);
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register(swURL).catch(console.error);
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
 
         function initData() {
             const savedPlatforms = localStorage.getItem('macau_platforms');
@@ -482,6 +538,7 @@
             if (savedSettings) state.settings = JSON.parse(savedSettings);
 
             saveData();
+            renderDashboard();
         }
 
         function saveData() {
@@ -512,6 +569,43 @@
             return `${formatDate(startDate)} 至 ${formatDate(endDate)}`;
         }
 
+        function promptInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    deferredPrompt = null;
+                });
+            } else {
+                openModal({
+                    title: "加入主畫面 (iOS/Safari)",
+                    desc: "請點擊瀏覽器底部的「分享」圖示<br/><br/>然後選擇「加入主畫面」<br/>即可當作 App 隨時使用！",
+                    iconType: "info", confirmBtnText: "明白", confirmBtnClass: "bg-blue-500",
+                    onConfirm: () => {}
+                });
+            }
+        }
+
+        function renderDashboard() {
+            const unused = state.vouchers.filter(v => v.status === 'unused');
+            const total = unused.reduce((sum, v) => sum + v.amount, 0);
+            document.getElementById('dash-total').textContent = `$${total}`;
+
+            const counts = {};
+            unused.forEach(v => { counts[v.amount] = (counts[v.amount] || 0) + 1; });
+
+            const breakdownEl = document.getElementById('dash-breakdown');
+            breakdownEl.innerHTML = '';
+            
+            if(Object.keys(counts).length === 0) {
+                breakdownEl.innerHTML = '<span class="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-100 font-medium text-gray-400">目前無未用消費券</span>';
+                return;
+            }
+
+            Object.keys(counts).map(Number).sort((a,b)=>a-b).forEach(amt => {
+                breakdownEl.innerHTML += `<span class="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-100 font-bold text-gray-700">$${amt}: <span class="text-blue-600">${counts[amt]}</span> 張</span>`;
+            });
+        }
+
         function navTo(screenId) {
             resetSwipe();
             viewSelectedIds.clear();
@@ -520,6 +614,7 @@
             document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
 
+            if (screenId === 'screen-main') renderDashboard();
             if (screenId === 'screen-settings') renderPlatforms();
             if (screenId === 'screen-add') {
                 state.sessionAdded = []; 
@@ -581,6 +676,18 @@
             closeModal();
         }
 
+        function promptClearVouchers() {
+            openModal({
+                title: "確認清除所有紀錄？",
+                desc: "將會刪除所有獲取及使用紀錄，但會保留你設定嘅銀行清單。",
+                iconType: "danger", confirmBtnText: "確認清除", confirmBtnClass: "bg-red-500",
+                onConfirm: () => {
+                    state.vouchers = []; state.sessionAdded = []; saveData(); 
+                    renderDashboard(); showToast("紀錄已清除", "success");
+                }
+            });
+        }
+
         function renderPlatforms() {
             const list = document.getElementById('platform-list');
             list.innerHTML = '';
@@ -616,17 +723,6 @@
         
         function updatePlatformColor(index, color) { state.platforms[index].color = color; saveData(); }
         function deletePlatform(index) { state.platforms.splice(index, 1); saveData(); renderPlatforms(); }
-
-        function promptClearVouchers() {
-            openModal({
-                title: "確認清除所有紀錄？",
-                desc: "將會刪除所有獲取及使用紀錄，但會保留你設定嘅銀行清單。",
-                iconType: "danger", confirmBtnText: "確認清除", confirmBtnClass: "bg-red-500",
-                onConfirm: () => {
-                    state.vouchers = []; state.sessionAdded = []; saveData(); showToast("紀錄已清除", "success");
-                }
-            });
-        }
 
         function populatePlatformSelect() {
             const select = document.getElementById('acquire-platform');
@@ -864,13 +960,11 @@
             let unused = state.vouchers.filter(v => v.status === 'unused');
             if (filterBank !== 'all') { unused = unused.filter(v => v.platform === filterBank); }
             
-            // Implementing Sort logic (Default, Descending, Ascending)
             if (sortMode === 'amount') {
                 unused.sort((a, b) => b.amount - a.amount);
             } else if (sortMode === 'amountAsc') {
                 unused.sort((a, b) => a.amount - b.amount);
             } else {
-                // Default: Newest first based on date acquired
                 unused.sort((a, b) => new Date(b.date) - new Date(a.date));
             }
 
@@ -933,7 +1027,6 @@
             let availableVouchers = state.vouchers.filter(v => v.status === 'unused');
             if (filterBank !== 'all') availableVouchers = availableVouchers.filter(v => v.platform === filterBank);
             
-            // Respect visual ordering for DP index logic
             if (sortMode === 'amount') availableVouchers.sort((a, b) => b.amount - a.amount);
             else if (sortMode === 'amountAsc') availableVouchers.sort((a, b) => a.amount - b.amount);
             else availableVouchers.sort((a, b) => new Date(b.date) - new Date(a.date));
