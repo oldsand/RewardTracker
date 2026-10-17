@@ -142,7 +142,7 @@
         <div id="screen-main" class="screen main-screen active bg-white">
             <div class="p-3 flex justify-between items-center shrink-0 border-b border-gray-50 pb-2">
                 <button onclick="promptInstall()" class="p-2 text-gray-400 hover:text-blue-600 active:bg-gray-100 rounded-full transition-colors">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4M12 12v9m0 0l-3-3m3 3l3-3"></path></svg>
                 </button>
                 <h1 class="text-xl font-bold text-gray-800 tracking-tight">消費獎賞小助手</h1>
                 <button onclick="navTo('screen-settings')" class="p-2 text-gray-400 hover:text-gray-800 active:bg-gray-100 rounded-full transition-colors">
@@ -235,7 +235,8 @@
                             <!-- Options injected here -->
                         </select>
                     </div>
-                    <div class="mb-6 relative">
+                    
+                    <div class="mb-5 relative">
                         <div class="flex justify-between items-center mb-3">
                             <label class="text-gray-700 font-bold text-sm">點擊金額 <span class="font-normal text-gray-400">(可混搭多張)</span></label>
                             <button onclick="resetAmountSelection()" class="text-xs text-red-500 font-bold bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg active:scale-95 transition-transform">
@@ -245,7 +246,11 @@
                         <div class="grid grid-cols-3 gap-3" id="amount-buttons-container">
                             <!-- Amount Buttons generated here by JS -->
                         </div>
+                        <button id="missed-draw-btn" onclick="toggleMissedDraw()" class="w-full mt-3 py-3.5 border-2 rounded-xl font-bold text-base transition-all duration-200 bg-gray-50 text-gray-500 border-gray-200 active:scale-95 shadow-sm">
+                            🥲 全部抽唔中 (0蚊)
+                        </button>
                     </div>
+                    
                     <button onclick="addVouchersBatch()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl text-xl shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform flex justify-center items-center gap-2">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                         確認新增
@@ -409,6 +414,7 @@
         
         // Multi-Selection State for "Get" Screen
         let selectedAmounts = { 10: 0, 20: 0, 50: 0, 100: 0, 200: 0 };
+        let isMissedSelected = false; // Tracks if '全部抽唔中' is selected
 
         // Swipe Delete State
         let swipeState = { startX: 0, activeElement: null, actionWidth: 0, isSwiping: false, openItemId: null };
@@ -473,6 +479,12 @@
             const startDate = new Date(now); startDate.setDate(now.getDate() - diff);
             const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
             return `${startDate.getFullYear()}-${String(startDate.getMonth()+1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')} 至 ${endDate.getFullYear()}-${String(endDate.getMonth()+1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+        }
+
+        function getUndrawnBanks() {
+            const currentRound = getCurrentRoundRange();
+            const drawnBanks = new Set(state.vouchers.filter(v => v.roundLabel === currentRound).map(v => v.platform));
+            return state.platforms.filter(p => !drawnBanks.has(p.name)).map(p => p.name);
         }
 
         function showToast(msg, type="success") {
@@ -545,14 +557,26 @@
             // Total Page
             const total = unused.reduce((s, v) => s + v.amount, 0);
             const counts = {}; unused.forEach(v => counts[v.amount] = (counts[v.amount] || 0) + 1);
-            let totalBreakdown = Object.keys(counts).length ? Object.keys(counts).map(Number).sort((a,b)=>a-b).map(amt => `<span class="bg-white/80 px-2 py-1 rounded-lg text-xs font-bold text-gray-700 shadow-sm">$${amt} <span class="text-blue-600">x${counts[amt]}</span></span>`).join('') : '<span class="text-xs text-gray-400 font-bold">暫無未用消費券</span>';
+            let totalBreakdown = Object.keys(counts).length ? Object.keys(counts).map(Number).sort((a,b)=>a-b).map(amt => `<span class="bg-white/80 px-2 py-1 rounded-lg text-xs font-bold text-gray-700 shadow-sm">$${amt} <span class="text-blue-600">x${counts[amt]}</span></span>`).join('') : '<span class="text-xs text-gray-400 font-bold mb-2 block">暫無未用消費券</span>';
+
+            const undrawnBanks = getUndrawnBanks();
+            const undrawnText = undrawnBanks.length > 0 ? undrawnBanks.join('、') : '✅ 全部銀行已抽獎';
 
             let slidesHTML = `
                 <div class="carousel-slide">
                     <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-2xl border border-blue-200 shadow-sm h-full flex flex-col justify-between">
-                        <p class="text-xs font-bold text-blue-800 uppercase tracking-widest mb-1">全部剩餘總額</p>
-                        <p class="text-4xl font-black text-blue-600 mb-3 drop-shadow-sm">$${total}</p>
-                        <div class="flex flex-wrap gap-1.5">${totalBreakdown}</div>
+                        <div>
+                            <p class="text-xs font-bold text-blue-800 uppercase tracking-widest mb-1">全部剩餘總額</p>
+                            <p class="text-4xl font-black text-blue-600 mb-3 drop-shadow-sm">$${total}</p>
+                            <div class="flex flex-wrap gap-1.5">${totalBreakdown}</div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-blue-200/50">
+                            <p class="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1 flex items-center">
+                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                未抽獎銀行 (本週)
+                            </p>
+                            <p class="text-xs text-blue-700 font-medium">${undrawnText}</p>
+                        </div>
                     </div>
                 </div>
             `;
@@ -573,8 +597,10 @@
                 slidesHTML += `
                 <div class="carousel-slide">
                     <div class="bg-white p-5 rounded-2xl border-l-[6px] shadow-sm h-full flex flex-col justify-between" style="border-left-color: ${color}; border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
-                        <p class="text-xs font-bold uppercase tracking-widest mb-1" style="color:${color}">${bank} 剩餘</p>
-                        <p class="text-4xl font-black mb-3 drop-shadow-sm text-gray-800">$${bData.total}</p>
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest mb-1" style="color:${color}">${bank} 剩餘</p>
+                            <p class="text-4xl font-black mb-3 drop-shadow-sm text-gray-800">$${bData.total}</p>
+                        </div>
                         <div class="flex flex-wrap gap-1.5">${bkDown}</div>
                     </div>
                 </div>`;
@@ -652,13 +678,14 @@
         
         function getRemainingAllowance(platform) {
             const currentRound = getCurrentRoundRange();
-            // Count all vouchers from this platform in the current round (regardless of used/unused/expired status)
-            const countInRound = state.vouchers.filter(v => v.platform === platform && v.roundLabel === currentRound).length;
-            return Math.max(0, 3 - countInRound);
+            const roundVouchers = state.vouchers.filter(v => v.platform === platform && v.roundLabel === currentRound);
+            if (roundVouchers.some(v => v.status === 'missed')) return 0; // Completely locked if 'missed' was chosen
+            return Math.max(0, 3 - roundVouchers.length);
         }
 
         function resetAmountSelection() {
             selectedAmounts = { 10: 0, 20: 0, 50: 0, 100: 0, 200: 0 };
+            isMissedSelected = false;
             renderAmountButtons();
         }
 
@@ -666,7 +693,14 @@
             const platform = document.getElementById('acquire-platform').value;
             if(!platform) return;
             
+            isMissedSelected = false; // Disable missed if selecting amount
+
             const maxAllowed = getRemainingAllowance(platform);
+            if (maxAllowed === 0) {
+                showToast(`今期 ${platform} 已無配額或已標記為抽唔中！`, "error");
+                return;
+            }
+
             const currentSelectedCount = Object.values(selectedAmounts).reduce((a, b) => a + b, 0);
             
             if (currentSelectedCount < maxAllowed) {
@@ -675,6 +709,29 @@
             } else {
                 showToast(`今期 ${platform} 最多只可抽 3 張（淨低配額：${maxAllowed}）！`, "error");
             }
+        }
+
+        function toggleMissedDraw() {
+            const platform = document.getElementById('acquire-platform').value;
+            if (!platform) return;
+            
+            const currentRound = getCurrentRoundRange();
+            const countInRound = state.vouchers.filter(v => v.platform === platform && v.roundLabel === currentRound && v.status !== 'missed').length;
+            
+            if (countInRound > 0) {
+                showToast(`已登記 ${countInRound} 張，不能再選擇「全部抽唔中」！`, "error");
+                return;
+            }
+            if (getRemainingAllowance(platform) === 0 && countInRound === 0) {
+                showToast(`今期 ${platform} 已標記過，無需重複提交。`, "error");
+                return;
+            }
+
+            isMissedSelected = !isMissedSelected;
+            if (isMissedSelected) {
+                selectedAmounts = { 10: 0, 20: 0, 50: 0, 100: 0, 200: 0 }; // Clear amounts if Missed is selected
+            }
+            renderAmountButtons();
         }
 
         function renderAmountButtons() {
@@ -692,18 +749,38 @@
                     ${badge}
                 </div>`;
             }).join('');
+
+            // Update Missed Button UI
+            const missedBtn = document.getElementById('missed-draw-btn');
+            if (missedBtn) {
+                if (isMissedSelected) {
+                    missedBtn.classList.add('bg-gray-600', 'text-white', 'border-gray-600');
+                    missedBtn.classList.remove('bg-gray-50', 'text-gray-500', 'border-gray-200');
+                } else {
+                    missedBtn.classList.remove('bg-gray-600', 'text-white', 'border-gray-600');
+                    missedBtn.classList.add('bg-gray-50', 'text-gray-500', 'border-gray-200');
+                }
+            }
         }
 
         function addVouchersBatch() {
             const platformName = document.getElementById('acquire-platform').value;
+            const currentRound = getCurrentRoundRange();
             const totalCount = Object.values(selectedAmounts).reduce((a, b) => a + b, 0);
             
+            if (isMissedSelected) {
+                const newVoucher = { id: 'v_' + Math.random().toString(36).substr(2, 9), platform: platformName, amount: 0, status: 'missed', roundLabel: currentRound, date: new Date().toISOString() };
+                state.vouchers.push(newVoucher);
+                state.sessionAdded.unshift(newVoucher);
+                saveData(); renderSessionAdded(); resetAmountSelection();
+                showToast(`已標記 ${platformName} 全部抽唔中！`, "success");
+                return;
+            }
+
             if (!platformName || totalCount === 0) { 
-                showToast("請點擊選擇金額！", "error"); 
+                showToast("請點擊選擇金額或抽唔中選項！", "error"); 
                 return; 
             }
-            
-            const currentRound = getCurrentRoundRange();
             
             amountTypes.forEach(amt => {
                 const count = selectedAmounts[amt];
@@ -723,11 +800,14 @@
         function renderSessionAdded() {
             const list = document.getElementById('session-added-list');
             if (!state.sessionAdded.length) { list.innerHTML = '<p class="text-gray-400 text-sm text-center py-2 font-medium">尚未新增</p>'; return; }
-            list.innerHTML = state.sessionAdded.map(v => `
+            list.innerHTML = state.sessionAdded.map(v => {
+                const amtText = v.status === 'missed' ? '<span class="text-sm font-bold text-gray-500 px-2 py-0.5 bg-gray-200 rounded">🥲 抽唔中</span>' : `<span class="font-black text-emerald-600">$${v.amount}</span>`;
+                return `
                 <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100" style="border-left: 5px solid ${getPlatformColor(v.platform)}">
                     <span class="font-bold text-gray-800">${v.platform} <span class="text-[10px] text-gray-400 ml-1 bg-white px-1.5 py-0.5 rounded shadow-sm">${v.roundLabel}</span></span>
-                    <span class="font-black text-emerald-600">$${v.amount}</span>
-                </div>`).join('');
+                    ${amtText}
+                </div>`;
+            }).join('');
         }
 
         function promptNewRound() {
@@ -793,29 +873,40 @@
 
         function renderViewList() {
             let total = 0, usedAmt = 0;
-            state.vouchers.forEach(v => { if (v.status !== 'expired') total += v.amount; if (v.status === 'used') usedAmt += v.amount; });
-            document.getElementById('stat-total').textContent = `$${total}`; document.getElementById('stat-used').textContent = `$${usedAmt}`; document.getElementById('stat-remain').textContent = `$${total - usedAmt}`;
+            state.vouchers.forEach(v => { 
+                if (v.status !== 'expired' && v.status !== 'missed') total += v.amount; 
+                if (v.status === 'used') usedAmt += v.amount; 
+            });
+            document.getElementById('stat-total').textContent = `$${total}`; 
+            document.getElementById('stat-used').textContent = `$${usedAmt}`; 
+            document.getElementById('stat-remain').textContent = `$${total - usedAmt}`;
 
             const list = document.getElementById('all-vouchers-list');
             swipeState.openItemId = null;
             if (!state.vouchers.length) { list.innerHTML = '<div class="text-center py-10 font-bold text-gray-400">暫無紀錄</div>'; return; }
 
             const sorted = [...state.vouchers].sort((a, b) => {
-                const o = { 'unused': 1, 'used': 2, 'expired': 2 };
+                const o = { 'unused': 1, 'used': 2, 'expired': 2, 'missed': 2 };
                 if (o[a.status] !== o[b.status]) return o[a.status] - o[b.status];
                 return new Date(b.date) - new Date(a.date);
             });
 
             list.innerHTML = sorted.map(v => {
-                let actionsHTML = v.status === 'used' ? `<button onclick="promptUnuse('${v.id}')" class="swipe-action-btn bg-amber-500"><svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>取消</button>` : '';
-                actionsHTML += `<button onclick="promptDelete('${v.id}')" class="swipe-action-btn bg-red-500 rounded-r-xl"><svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>刪除</button>`;
+                let actionsHTML = '';
+                if (v.status === 'used') {
+                    actionsHTML += `<button onclick="promptUnuse('${v.id}')" class="swipe-action-btn bg-amber-500"><svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>取消</button>`;
+                }
+                const delClass = (v.status === 'unused' || v.status === 'expired' || v.status === 'missed') ? "rounded-r-xl w-full" : "rounded-r-xl";
+                actionsHTML += `<button onclick="promptDelete('${v.id}')" class="swipe-action-btn bg-red-500 ${delClass}"><svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>刪除</button>`;
 
                 let cl = 'swipe-content flex justify-between items-center cursor-pointer ' + (viewSelectedIds.has(v.id) ? 'view-selected-highlight ' : '');
                 let badge = '', aCl = 'text-gray-800 amt-text', pCl = 'text-gray-800 platform-text', bCl = `border-left: 6px solid ${getPlatformColor(v.platform)}`;
+                let displayAmount = `$${v.amount}`;
                 
                 if (v.status === 'unused') cl += 'bg-white';
                 else if (v.status === 'used') { cl += 'status-used'; badge = '<span class="text-[10px] bg-white text-gray-500 px-2 py-0.5 rounded-full font-bold ml-2 shadow-sm">✓ 已使用</span>'; pCl = 'text-gray-500 platform-text'; }
-                else { cl += 'status-expired'; badge = '<span class="text-[10px] bg-white text-gray-400 px-2 py-0.5 rounded-full font-bold ml-2 shadow-sm">💸 失效</span>'; aCl = 'text-gray-400 line-through amt-text'; pCl = 'text-gray-400 platform-text'; bCl = 'border-left: 6px solid #cbd5e1'; }
+                else if (v.status === 'expired') { cl += 'status-expired'; badge = '<span class="text-[10px] bg-white text-gray-400 px-2 py-0.5 rounded-full font-bold ml-2 shadow-sm">💸 失效</span>'; aCl = 'text-gray-400 line-through amt-text'; pCl = 'text-gray-400 platform-text'; bCl = 'border-left: 6px solid #cbd5e1'; }
+                else if (v.status === 'missed') { cl += 'status-expired'; badge = '<span class="text-[10px] bg-white text-gray-500 px-2 py-0.5 rounded-full font-bold ml-2 shadow-sm">🥲 抽唔中</span>'; aCl = 'text-gray-400 amt-text text-sm font-medium'; pCl = 'text-gray-500 platform-text'; bCl = 'border-left: 6px solid #cbd5e1'; displayAmount = '無紀錄'; }
 
                 return `
                 <div class="swipe-item-container shadow-sm border border-gray-200">
@@ -825,7 +916,7 @@
                             <div class="flex items-center"><span class="font-bold text-lg ${pCl}">${v.platform}</span>${badge}</div>
                             <p class="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-wider">${v.roundLabel}</p>
                         </div>
-                        <div class="font-black text-2xl pointer-events-none ${aCl}">$${v.amount}</div>
+                        <div class="font-black text-2xl pointer-events-none ${aCl}">${displayAmount}</div>
                     </div>
                 </div>`;
             }).join('');
