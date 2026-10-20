@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>小一英文挑戰賽 (進階擴充版)</title>
+<style>
+  :root {
+    --primary: #4CAF50;
+    --secondary: #FF9800;
+    --bg: #F0F8FF;
+    --text: #333;
+    --box-bg: #FFF;
+    --option-bg: #E3F2FD;
+    --option-border: #90CAF9;
+    --option-selected-bg: #FFB74D;
+    --option-selected-border: #F57C00;
+  }
+  body {
+    font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', '微軟正黑體', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 15px;
+    font-size: 20px;
+    user-select: none;
+  }
+  h1 {
+    text-align: center;
+    color: var(--secondary);
+    font-size: 28px;
+    text-shadow: 2px 2px 0px #FFE0B2;
+    margin-bottom: 10px;
+  }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 15px;
+  }
+  .tab-btn {
+    background-color: #E0E0E0;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 15px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  .tab-btn.active {
+    background-color: var(--secondary);
+    color: white;
+    transform: scale(1.05);
+  }
+  .quiz-container {
+    background: var(--box-bg);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .question-item {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 2px dashed #E0E0E0;
+  }
+  .question-text {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    line-height: 1.5;
+  }
+  .options-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .mcq-option {
+    background-color: var(--option-bg);
+    border: 3px solid var(--option-border);
+    border-radius: 12px;
+    padding: 12px 15px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #1565C0;
+    cursor: pointer;
+    transition: 0.2s;
+    flex-grow: 1;
+    text-align: center;
+    min-width: 30%;
+  }
+  .mcq-option.selected {
+    background-color: var(--option-selected-bg);
+    border-color: var(--option-selected-border);
+    color: #FFF;
+    transform: scale(1.02);
+  }
+  .mcq-option.correct {
+    background-color: #4CAF50 !important;
+    border-color: #388E3C !important;
+    color: white !important;
+  }
+  .mcq-option.wrong {
+    background-color: #F44336 !important;
+    border-color: #D32F2F !important;
+    color: white !important;
+  }
+  .submit-btn {
+    display: block;
+    width: 100%;
+    max-width: 250px;
+    margin: 20px auto 10px;
+    background-color: var(--primary);
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    padding: 15px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #388E3C;
+  }
+  .submit-btn:active {
+    transform: translateY(6px);
+    box-shadow: none;
+  }
+  #score-display {
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+    color: #D32F2F;
+    margin-top: 20px;
+  }
+  .feedback-icon {
+    font-size: 24px;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <h1>🌟 英文點選挑戰賽 (進階版) 🌟</h1>
+  
+  <div class="tabs">
+    <button class="tab-btn active" onclick="loadTab(0)">Part 1: a 或 an</button>
+    <button class="tab-btn" onclick="loadTab(1)">Part 2: Much / Many</button>
+    <button class="tab-btn" onclick="loadTab(2)">Part 3: 複數變身</button>
+    <button class="tab-btn" onclick="loadTab(3)">Part 4: 可數/不可數</button>
+    <button class="tab-btn" onclick="loadTab(4)">Part 5: 問句與簡答</button>
+  </div>
+
+  <div class="quiz-container">
+    <h2 id="part-title" style="color: #1976D2; text-align: center;"></h2>
+    <div id="questions-area"></div>
+    <button class="submit-btn" onclick="checkAnswers()">📝 交卷檢查</button>
+    <div id="score-display"></div>
+  </div>
+</div>
+
+<script>
+// 五大全新題型庫 (根據提供的最新試卷圖片設計)
+const quizData = [
+  {
+    title: "Part 1: 選擇正確的 a 或 an",
+    questions: [
+      { text: "1. ____ orange", options: ["a", "an"], ansIndex: 1 },
+      { text: "2. ____ kangaroo", options: ["a", "an"], ansIndex: 0 },
+      { text: "3. ____ honest girl (注意發音喔)", options: ["a", "an"], ansIndex: 1 },
+      { text: "4. ____ blackboard", options: ["a", "an"], ansIndex: 0 },
+      { text: "5. ____ uniform (注意發音喔)", options: ["a", "an"], ansIndex: 0 },
+      { text: "6. ____ angle", options: ["a", "an"], ansIndex: 1 },
+      { text: "7. ____ egg", options: ["a", "an"], ansIndex: 1 },
+      { text: "8. ____ cake", options: ["a", "an"], ansIndex: 0 },
+      { text: "9. ____ stamp", options: ["a", "an"], ansIndex: 0 },
+      { text: "10. ____ envelope", options: ["a", "an"], ansIndex: 1 }
+    ]
+  },
+  {
+    title: "Part 2: 選擇 How much 或 How many",
+    questions: [
+      { text: "1. How ____ sugar is there in the bowl?", options: ["much", "many"], ansIndex: 0 },
+      { text: "2. How ____ storybooks are there on the table?", options: ["much", "many"], ansIndex: 1 },
+      { text: "3. How ____ teeth does Ben have?", options: ["much", "many"], ansIndex: 1 },
+      { text: "4. How ____ bread is there on the table?", options: ["much", "many"], ansIndex: 0 },
+      { text: "5. How ____ milk do you want?", options: ["much", "many"], ansIndex: 0 },
+      { text: "6. How ____ pens do you have?", options: ["much", "many"], ansIndex: 1 },
+      { text: "7. How ____ paper do we need?", options: ["much", "many"], ansIndex: 0 },
+      { text: "8. How ____ potatoes are there?", options: ["much", "many"], ansIndex: 1 },
+      { text: "9. How ____ juice is in the cup?", options: ["much", "many"], ansIndex: 0 },
+      { text: "10. How ____ sandwiches do you eat?", options: ["much", "many"], ansIndex: 1 }
+    ]
+  },
+  {
+    title: "Part 3: 選出正確的「複數」名詞 (Plural forms)",
+    questions: [
+      { text: "1. goose", options: ["gooses", "geese", "geeses"], ansIndex: 1 },
+      { text: "2. leaf", options: ["leafs", "leaves", "leafes"], ansIndex: 1 },
+      { text: "3. mouse", options: ["mouses", "mice", "mices"], ansIndex: 1 },
+      { text: "4. child", options: ["childs", "children", "childes"], ansIndex: 1 },
+      { text: "5. ox", options: ["oxes", "oxen", "oxs"], ansIndex: 1 },
+      { text: "6. wolf", options: ["wolfs", "wolves", "wolfes"], ansIndex: 1 },
+      { text: "7. deer", options: ["deers", "deer", "deeres"], ansIndex: 1 },
+      { text: "8. person", options: ["persons", "people", "peoples"], ansIndex: 1 },
+      { text: "9. knife", options: ["knifes", "knives", "knive"], ansIndex: 1 },
+      { text: "10. tooth", options: ["tooths", "teeth", "teethes"], ansIndex: 1 },
+      { text: "11. foot", options: ["foots", "feet", "feets"], ansIndex: 1 },
+      { text: "12. piano", options: ["pianos", "pianoes", "piano"], ansIndex: 0 },
+      { text: "13. butterfly", options: ["butterflys", "butterflies", "butterflyes"], ansIndex: 1 },
+      { text: "14. tomato", options: ["tomatos", "tomatoes", "tomato"], ansIndex: 1 },
+      { text: "15. sheep", options: ["sheeps", "sheep", "sheepes"], ansIndex: 1 }
+    ]
+  },
+  {
+    title: "Part 4: 請問它是可數還是不可數？",
+    questions: [
+      { text: "1. pork (豬肉)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 1 },
+      { text: "2. sand (沙子)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 1 },
+      { text: "3. grape (葡萄)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 0 },
+      { text: "4. honey (蜂蜜)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 1 },
+      { text: "5. paper (紙張)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 1 },
+      { text: "6. potato (馬鈴薯)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 0 },
+      { text: "7. cereal (麥片)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 1 },
+      { text: "8. park (公園)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 0 },
+      { text: "9. oil (油)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 1 },
+      { text: "10. meat (肉類)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 1 }
+    ]
+  },
+  {
+    title: "Part 5: 讀問句，選出正確的簡答",
+    questions: [
+      { text: "1. Are they teddy bears? (Yes)", options: ["Yes, they are.", "Yes, it is.", "Yes, they do."], ansIndex: 0 },
+      { text: "2. Is Jane a dancer? (No)", options: ["No, he is not.", "No, she is not.", "No, she doesn't."], ansIndex: 1 },
+      { text: "3. Is it a lion? (Yes)", options: ["Yes, it does.", "Yes, he is.", "Yes, it is."], ansIndex: 2 },
+      { text: "4. Is Tom a policeman? (Yes)", options: ["Yes, she is.", "Yes, he is.", "Yes, it is."], ansIndex: 1 },
+      { text: "5. Are you a teacher? (No)", options: ["No, I am not.", "No, you aren't.", "No, he isn't."], ansIndex: 0 },
+      { text: "6. Is Tom reading a book? (Yes)", options: ["Yes, I am.", "Yes, he is.", "Yes, he does."], ansIndex: 1 },
+      { text: "7. Does Sue know the answer? (No)", options: ["No, she isn't.", "No, she doesn't.", "No, he doesn't."], ansIndex: 1 },
+      { text: "8. Do you like spiders? (No)", options: ["No, I don't.", "No, I am not.", "No, you don't."], ansIndex: 0 },
+      { text: "9. Are these apples sweet? (Yes)", options: ["Yes, it is.", "Yes, they do.", "Yes, they are."], ansIndex: 2 },
+      { text: "10. Is there a mango? (No)", options: ["No, it isn't.", "No, there isn't.", "No, there aren't."], ansIndex: 1 }
+    ]
+  }
+];
+
+let currentTabIndex = 0;
+let userAnswers = {}; 
+
+function loadTab(index) {
+  currentTabIndex = index;
+  userAnswers = {}; 
+  
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === index);
+  });
+
+  const section = quizData[index];
+  document.getElementById('part-title').innerHTML = section.title;
+  document.getElementById('score-display').innerHTML = "";
+  
+  const container = document.getElementById('questions-area');
+  container.innerHTML = '';
+
+  section.questions.forEach((q, qIndex) => {
+    let questionHTML = `<div class="question-item" id="q-${qIndex}">`;
+    questionHTML += `<div class="question-text">${q.text} <span class="feedback-icon" id="icon-${qIndex}"></span></div>`;
+    
+    questionHTML += `<div class="options-container">`;
+    q.options.forEach((opt, optIndex) => {
+      questionHTML += `<div class="mcq-option" id="opt-${qIndex}-${optIndex}" onclick="selectOption(${qIndex}, ${optIndex})">${opt}</div>`;
+    });
+    questionHTML += `</div></div>`;
+    
+    container.innerHTML += questionHTML;
+  });
+}
+
+function selectOption(qIndex, optIndex) {
+  userAnswers[qIndex] = optIndex;
+  
+  const section = quizData[currentTabIndex];
+  section.questions[qIndex].options.forEach((_, i) => {
+    document.getElementById(`opt-${qIndex}-${i}`).classList.remove('selected', 'correct', 'wrong');
+  });
+  
+  document.getElementById(`opt-${qIndex}-${optIndex}`).classList.add('selected');
+}
+
+function checkAnswers() {
+  const section = quizData[currentTabIndex];
+  let correctCount = 0;
+  let totalQuestions = section.questions.length;
+
+  section.questions.forEach((q, qIndex) => {
+    const selectedIdx = userAnswers[qIndex];
+    const correctIdx = q.ansIndex;
+    const iconSpan = document.getElementById(`icon-${qIndex}`);
+
+    q.options.forEach((_, i) => {
+      const optDiv = document.getElementById(`opt-${qIndex}-${i}`);
+      optDiv.classList.remove('correct', 'wrong');
+    });
+
+    if (selectedIdx === undefined) {
+      iconSpan.innerHTML = "⚠️ (未作答)";
+      iconSpan.style.color = "#FF9800";
+    } else if (selectedIdx === correctIdx) {
+      correctCount++;
+      document.getElementById(`opt-${qIndex}-${selectedIdx}`).classList.add('correct');
+      iconSpan.innerHTML = "✅";
+    } else {
+      document.getElementById(`opt-${qIndex}-${selectedIdx}`).classList.add('wrong');
+      document.getElementById(`opt-${qIndex}-${correctIdx}`).classList.add('correct');
+      iconSpan.innerHTML = "❌";
+    }
+  });
+  
+  const scoreDiv = document.getElementById('score-display');
+  scoreDiv.innerHTML = `🌟 你的成績：${correctCount} / ${totalQuestions} 題 🌟`;
+  if (correctCount === totalQuestions) {
+    scoreDiv.style.color = "#4CAF50";
+    scoreDiv.innerHTML += "<br>太棒了！全對！🎉";
+  } else {
+    scoreDiv.style.color = "#D32F2F";
+  }
+}
+
+window.onload = () => loadTab(0);
+</script>
+
+</body>
+</html>
