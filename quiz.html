@@ -1,9 +1,13 @@
+明白！非常抱歉，上次我誤以為你是想「替換」成全新的題型，沒有把之前的 80 題保留下來。
+這次我以你最滿意的那個「點選版 (Multiple Choice) 80 題大題庫」為基礎，將新考卷（a/an, much/many, 不規則複數、可數/不可數、簡答）的考題直接加進去。
+現在這個版本總共有 9 個 Part，一共 135 題，真正做到一個超級完整的「終極大題庫」！
+請複製以下程式碼，覆蓋你原本的 index.html 即可：
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>小一英文挑戰賽 (進階擴充版)</title>
+<title>小一英文終極挑戰賽 (全題型綜合版)</title>
 <style>
   :root {
     --primary: #4CAF50;
@@ -43,7 +47,7 @@
     background-color: #E0E0E0;
     border: none;
     border-radius: 12px;
-    padding: 10px 15px;
+    padding: 8px 12px;
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
@@ -145,14 +149,19 @@
 <body>
 
 <div id="app">
-  <h1>🌟 英文點選挑戰賽 (進階版) 🌟</h1>
+  <h1>🌟 英文終極點選大挑戰 🌟</h1>
   
+  <!-- 總共 9 個分頁 -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="loadTab(0)">Part 1: a 或 an</button>
-    <button class="tab-btn" onclick="loadTab(1)">Part 2: Much / Many</button>
-    <button class="tab-btn" onclick="loadTab(2)">Part 3: 複數變身</button>
-    <button class="tab-btn" onclick="loadTab(3)">Part 4: 可數/不可數</button>
-    <button class="tab-btn" onclick="loadTab(4)">Part 5: 問句與簡答</button>
+    <button class="tab-btn active" onclick="loadTab(0)">Part 1: 單複數名詞</button>
+    <button class="tab-btn" onclick="loadTab(1)">Part 2: Be 動詞</button>
+    <button class="tab-btn" onclick="loadTab(2)">Part 3: Do/Does/Have</button>
+    <button class="tab-btn" onclick="loadTab(3)">Part 4: 問答配對</button>
+    <button class="tab-btn" onclick="loadTab(4)">Part 5: a 或 an</button>
+    <button class="tab-btn" onclick="loadTab(5)">Part 6: Much / Many</button>
+    <button class="tab-btn" onclick="loadTab(6)">Part 7: 複數大變身</button>
+    <button class="tab-btn" onclick="loadTab(7)">Part 8: 可數/不可數</button>
+    <button class="tab-btn" onclick="loadTab(8)">Part 9: 問答簡答</button>
   </div>
 
   <div class="quiz-container">
@@ -164,10 +173,113 @@
 </div>
 
 <script>
-// 五大全新題型庫 (根據提供的最新試卷圖片設計)
+// 完整題庫 (包含舊版 80 題 + 新版 55 題 = 135 題)
 const quizData = [
+  // ---------------- 【舊版保留區】 ----------------
   {
-    title: "Part 1: 選擇正確的 a 或 an",
+    title: "Part 1: 請選擇正確的名詞 (單數/複數)",
+    questions: [
+      { text: "1. Please pass me a pair of ____ (chopstick).", options: ["chopstick", "chopsticks", "chopstickes"], ansIndex: 1 },
+      { text: "2. My mother eats an ____ (apple) every morning.", options: ["apples", "apple", "appls"], ansIndex: 1 },
+      { text: "3. Mrs Green buys many ____ (strawberry) to make a pie.", options: ["strawberry", "strawberrys", "strawberries"], ansIndex: 2 },
+      { text: "4. Mum adds some ____ (cheese) to the pizza.", options: ["cheese", "cheeses", "cheesies"], ansIndex: 0 },
+      { text: "5. I can see four ____ (tiger) at the zoo.", options: ["tiger", "tigers", "tigeres"], ansIndex: 1 },
+      { text: "6. Winnie has two ____ (hamster) as her pets.", options: ["hamster", "hamsters", "hamsteres"], ansIndex: 1 },
+      { text: "7. Please pass me a pair of ____ (shoe).", options: ["shoe", "shoees", "shoes"], ansIndex: 2 },
+      { text: "8. My dad drinks a glass of ____ (water).", options: ["water", "waters", "wateres"], ansIndex: 0 },
+      { text: "9. There are five ____ (monkey) on the tree.", options: ["monkeys", "monkies", "monkey"], ansIndex: 0 },
+      { text: "10. Can I have an ____ (orange), please?", options: ["oranges", "orange", "orangees"], ansIndex: 1 },
+      { text: "11. Grandma makes some ____ (cookie) for us.", options: ["cookie", "cookies", "cookys"], ansIndex: 1 },
+      { text: "12. He wears a pair of ____ (sock).", options: ["sock", "sockes", "socks"], ansIndex: 2 },
+      { text: "13. She wants three ____ (banana).", options: ["banana", "bananas", "bananes"], ansIndex: 1 },
+      { text: "14. There is a ____ (bird) in the garden.", options: ["birds", "bird", "birdes"], ansIndex: 1 },
+      { text: "15. My uncle has two ____ (dog).", options: ["dogs", "dog", "doges"], ansIndex: 0 },
+      { text: "16. Put some ____ (butter) on the bread.", options: ["butters", "butteres", "butter"], ansIndex: 2 },
+      { text: "17. Look! Three ____ (bus) are coming.", options: ["buss", "buses", "bus"], ansIndex: 1 },
+      { text: "18. I see an ____ (elephant) at the park.", options: ["elephant", "elephants", "elephantes"], ansIndex: 0 },
+      { text: "19. Please give me two ____ (pencil).", options: ["pencil", "penciles", "pencils"], ansIndex: 2 },
+      { text: "20. Tom buys many ____ (mango) from the shop.", options: ["mango", "mangos", "mangies"], ansIndex: 1 }
+    ]
+  },
+  {
+    title: "Part 2: 請選擇正確的 Be 動詞 (am / is / are)",
+    questions: [
+      { text: "1. I have a dog. It ____ cute.", options: ["am", "is", "are"], ansIndex: 1 },
+      { text: "2. Kelly ____ my sister.", options: ["am", "is", "are"], ansIndex: 1 },
+      { text: "3. I ____ six years old.", options: ["am", "is", "are"], ansIndex: 0 },
+      { text: "4. John ____ my brother.", options: ["am", "is", "are"], ansIndex: 1 },
+      { text: "5. Grace and I always play together. We ____ friends.", options: ["am", "is", "are"], ansIndex: 2 },
+      { text: "6. Joan and Serena ____ my sisters.", options: ["am", "is", "are"], ansIndex: 2 },
+      { text: "7. My parents ____ at home. They are in the park.", options: ["isn't", "am not", "aren't"], ansIndex: 2 },
+      { text: "8. Look at the sun. It ____ very bright today.", options: ["am", "is", "are"], ansIndex: 1 },
+      { text: "9. You ____ a polite student.", options: ["am", "is", "are"], ansIndex: 2 },
+      { text: "10. The children ____ sad. They are happy.", options: ["isn't", "aren't", "am not"], ansIndex: 1 },
+      { text: "11. Miss Lee ____ our English teacher.", options: ["am", "is", "are"], ansIndex: 1 },
+      { text: "12. I ____ hungry now.", options: ["am not", "isn't", "aren't"], ansIndex: 0 },
+      { text: "13. Peter and Sam ____ brothers.", options: ["am", "is", "are"], ansIndex: 2 },
+      { text: "14. The cat ____ under the chair.", options: ["am", "is", "are"], ansIndex: 1 },
+      { text: "15. My pencil ____ in my schoolbag. I lost it.", options: ["aren't", "am not", "isn't"], ansIndex: 2 },
+      { text: "16. We ____ ready for the test.", options: ["am", "is", "are"], ansIndex: 2 },
+      { text: "17. It ____ a cold day today.", options: ["am", "is", "are"], ansIndex: 1 },
+      { text: "18. My uncle ____ a brave doctor.", options: ["am", "is", "are"], ansIndex: 1 },
+      { text: "19. The apples ____ sweet. They are sour.", options: ["isn't", "aren't", "am not"], ansIndex: 1 },
+      { text: "20. I ____ at school right now.", options: ["am", "is", "are"], ansIndex: 0 }
+    ]
+  },
+  {
+    title: "Part 3: 請選擇正確的組合 (do / does / have / has)",
+    questions: [
+      { text: "1. A: How many hats ____ you have? <br>B: I ____ two hats.", options: ["do / have", "does / has", "do / has"], ansIndex: 0 },
+      { text: "2. A: ____ your sister ____ any dolls? <br>B: No, she doesn't.", options: ["Do / have", "Does / have", "Does / has"], ansIndex: 1 },
+      { text: "3. A: How many plants ____ your grandparents ____? <br>B: They have some.", options: ["does / have", "do / has", "do / have"], ansIndex: 2 },
+      { text: "4. A: ____ you have any stickers? <br>B: Yes, I ____.", options: ["Do / do", "Does / does", "Do / have"], ansIndex: 0 },
+      { text: "5. A: How many cars does your brother have? <br>B: He ____ three cars.", options: ["have", "has", "does"], ansIndex: 1 },
+      { text: "6. A: ____ your mother ____ an umbrella? <br>B: Yes, she does.", options: ["Does / have", "Do / have", "Does / has"], ansIndex: 0 },
+      { text: "7. A: How many rulers does the teacher have? <br>B: She ____ five rulers.", options: ["have", "has", "does"], ansIndex: 1 },
+      { text: "8. A: ____ Tim and Ben have bicycles? <br>B: No, they ____.", options: ["Do / doesn't", "Does / don't", "Do / don't"], ansIndex: 2 },
+      { text: "9. A: How many books ____ you ____? <br>B: I have ten books.", options: ["do / have", "does / have", "do / has"], ansIndex: 0 },
+      { text: "10. A: ____ your dog ____ a long tail? <br>B: Yes, it does.", options: ["Does / has", "Does / have", "Do / have"], ansIndex: 1 },
+      { text: "11. A: How many crayons does May have? <br>B: She ____ eight crayons.", options: ["have", "has", "does"], ansIndex: 1 },
+      { text: "12. A: ____ you have a ruler? <br>B: No, I ____.", options: ["Do / doesn't", "Does / don't", "Do / don't"], ansIndex: 2 },
+      { text: "13. A: How many erasers ____ they ____? <br>B: They have four erasers.", options: ["do / has", "do / have", "does / have"], ansIndex: 1 },
+      { text: "14. A: ____ Mr. Chan ____ a blue car? <br>B: No, he doesn't.", options: ["Does / have", "Do / have", "Does / has"], ansIndex: 0 },
+      { text: "15. A: How many apples does your aunt have? <br>B: She ____ many apples.", options: ["have", "has", "does"], ansIndex: 1 },
+      { text: "16. A: ____ your friends have any games? <br>B: Yes, they ____.", options: ["Do / do", "Does / does", "Do / don't"], ansIndex: 0 },
+      { text: "17. A: How many sweets does Sam have? <br>B: He ____ two sweets.", options: ["have", "has", "does"], ansIndex: 1 },
+      { text: "18. A: ____ she ____ any sisters? <br>B: No, she doesn't.", options: ["Does / has", "Do / have", "Does / have"], ansIndex: 2 },
+      { text: "19. A: How many pens ____ we ____? <br>B: We have six pens.", options: ["do / have", "does / have", "do / has"], ansIndex: 0 },
+      { text: "20. A: ____ you have a pet cat? <br>B: Yes, I ____.", options: ["Do / do", "Does / does", "Do / have"], ansIndex: 0 }
+    ]
+  },
+  {
+    title: "Part 4: 閱讀問句並選擇正確的回答",
+    questions: [
+      { text: "1. Is Joe a doctor?", options: ["No, he isn't.", "No, she isn't.", "Yes, they are."], ansIndex: 0 },
+      { text: "2. Are the toys in the bedroom?", options: ["No, it isn't.", "No, they aren't.", "Yes, I am."], ansIndex: 1 },
+      { text: "3. Does your cat like fish?", options: ["Yes, he does.", "Yes, it is.", "Yes, it does."], ansIndex: 2 },
+      { text: "4. Is it a pencil?", options: ["Yes, it is.", "Yes, it does.", "No, they aren't."], ansIndex: 0 },
+      { text: "5. Are you from London?", options: ["Yes, he is.", "Yes, I am.", "No, it isn't."], ansIndex: 1 },
+      { text: "6. Do Wendy and Tracy like swimming?", options: ["No, they don't.", "No, they aren't.", "Yes, she does."], ansIndex: 0 },
+      { text: "7. Does Miss Lam like hamburgers?", options: ["Yes, he does.", "Yes, she does.", "No, she isn't."], ansIndex: 1 },
+      { text: "8. Is Mr. Wong a driver?", options: ["Yes, he is.", "Yes, she is.", "No, it isn't."], ansIndex: 0 },
+      { text: "9. Are the books on the desk?", options: ["Yes, it is.", "No, they aren't.", "Yes, they do."], ansIndex: 1 },
+      { text: "10. Do you like apples?", options: ["Yes, I am.", "Yes, I do.", "No, he doesn't."], ansIndex: 1 },
+      { text: "11. Does your dog bark at night?", options: ["No, it isn't.", "No, it doesn't.", "Yes, they do."], ansIndex: 1 },
+      { text: "12. Is Mary your classmate?", options: ["Yes, he is.", "Yes, she is.", "No, she doesn't."], ansIndex: 1 },
+      { text: "13. Are you seven years old?", options: ["No, I'm not.", "No, I don't.", "Yes, he is."], ansIndex: 0 },
+      { text: "14. Do Tom and Jerry play football?", options: ["Yes, he does.", "Yes, they do.", "No, they aren't."], ansIndex: 1 },
+      { text: "15. Is this an eraser?", options: ["Yes, it is.", "Yes, it does.", "No, he isn't."], ansIndex: 0 },
+      { text: "16. Are the birds in the tree?", options: ["Yes, it is.", "Yes, they are.", "No, they don't."], ansIndex: 1 },
+      { text: "17. Does your father like coffee?", options: ["Yes, he is.", "Yes, she does.", "Yes, he does."], ansIndex: 2 },
+      { text: "18. Is she your mother?", options: ["No, she isn't.", "No, he isn't.", "Yes, she does."], ansIndex: 0 },
+      { text: "19. Do we have homework today?", options: ["Yes, they do.", "Yes, we do.", "No, we aren't."], ansIndex: 1 },
+      { text: "20. Are you happy today?", options: ["Yes, I do.", "Yes, I am.", "No, she isn't."], ansIndex: 1 }
+    ]
+  },
+
+  // ---------------- 【新版擴充區】 ----------------
+  {
+    title: "Part 5: 選擇正確的 a 或 an",
     questions: [
       { text: "1. ____ orange", options: ["a", "an"], ansIndex: 1 },
       { text: "2. ____ kangaroo", options: ["a", "an"], ansIndex: 0 },
@@ -182,7 +294,7 @@ const quizData = [
     ]
   },
   {
-    title: "Part 2: 選擇 How much 或 How many",
+    title: "Part 6: 選擇 How much 或 How many",
     questions: [
       { text: "1. How ____ sugar is there in the bowl?", options: ["much", "many"], ansIndex: 0 },
       { text: "2. How ____ storybooks are there on the table?", options: ["much", "many"], ansIndex: 1 },
@@ -197,7 +309,7 @@ const quizData = [
     ]
   },
   {
-    title: "Part 3: 選出正確的「複數」名詞 (Plural forms)",
+    title: "Part 7: 選出正確的「複數」名詞 (Plural forms)",
     questions: [
       { text: "1. goose", options: ["gooses", "geese", "geeses"], ansIndex: 1 },
       { text: "2. leaf", options: ["leafs", "leaves", "leafes"], ansIndex: 1 },
@@ -217,7 +329,7 @@ const quizData = [
     ]
   },
   {
-    title: "Part 4: 請問它是可數還是不可數？",
+    title: "Part 8: 請問它是可數還是不可數？",
     questions: [
       { text: "1. pork (豬肉)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 1 },
       { text: "2. sand (沙子)", options: ["可數 Countable", "不可數 Uncountable"], ansIndex: 1 },
@@ -232,7 +344,7 @@ const quizData = [
     ]
   },
   {
-    title: "Part 5: 讀問句，選出正確的簡答",
+    title: "Part 9: 讀問句，選出正確的簡答",
     questions: [
       { text: "1. Are they teddy bears? (Yes)", options: ["Yes, they are.", "Yes, it is.", "Yes, they do."], ansIndex: 0 },
       { text: "2. Is Jane a dancer? (No)", options: ["No, he is not.", "No, she is not.", "No, she doesn't."], ansIndex: 1 },
