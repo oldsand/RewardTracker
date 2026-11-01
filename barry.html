@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>消費獎賞小助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; display: flex; justify-content: center; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+        .app-container { width: 100%; max-width: 480px; background-color: #f8fafc; height: 100dvh; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        
+        /* Screens */
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; background-color: #f8fafc; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; transform: translateX(100%); opacity: 0; z-index: 10; pointer-events: none; }
+        .screen.active { transform: translateX(0); opacity: 1; z-index: 20; pointer-events: auto; }
+        .screen.main-screen { transform: translateX(-20%); }
+        .screen.main-screen.active { transform: translateX(0); }
+        .scrollable-content { flex: 1; overflow-y: auto; padding: 1rem; overflow-x: hidden; }
+        
+        /* Carousel Dashboard */
+        .carousel-container { width: 100%; overflow-x: auto; scroll-snap-type: x mandatory; display: flex; gap: 1rem; padding: 0.5rem 1rem 1rem 1rem; scrollbar-width: none; }
+        .carousel-container::-webkit-scrollbar { display: none; }
+        .carousel-slide { flex: 0 0 100%; scroll-snap-align: start; box-sizing: border-box; }
+        
+        /* Swipe Actions */
+        .swipe-item-container { position: relative; overflow: hidden; border-radius: 0.75rem; margin-bottom: 0.75rem; background-color: #f1f5f9; }
+        .swipe-actions { position: absolute; top: 0; bottom: 0; right: 0; display: flex; z-index: 1; }
+        .swipe-action-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.875rem; width: 75px; }
+        .swipe-content { position: relative; z-index: 2; width: 100%; background-color: white; transition: transform 0.25s ease-out; border-radius: 0.75rem; padding: 1rem; min-height: 76px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .swipe-content.swiping { transition: none; }
+        
+        /* Status Styling (Identical Padding/Margin) */
+        .status-used, .status-expired { background-color: #f1f5f9 !important; }
+        .status-used .amt-text, .status-expired .amt-text, .status-expired .platform-text, .status-used .platform-text { color: #94a3b8 !important; }
+        
+        /* Highlights */
+        .suggested-highlight { border: 2px solid #ef4444 !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4) !important; transform: scale(1.02); transition: all 0.3s ease; z-index: 10; position: relative; }
+        .view-selected-highlight { border: 2px solid #10b981 !important; background-color: #ecfdf5 !important; }
+
+        /* Multiplier Badge */
+        .multiplier-badge { position: absolute; top: -8px; right: -8px; background-color: #ef4444; color: white; font-weight: 900; font-size: 0.875rem; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); animation: pop 0.2s; }
+        @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
+
+        /* Dialog Modal */
+        .dialog-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-blur-sm; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 100; }
+        .dialog-overlay.active { opacity: 1; pointer-events: auto; }
+        .dialog-box { background: white; width: 85%; max-width: 320px; border-radius: 1.5rem; padding: 1.5rem; transform: scale(0.95); transition: transform 0.2s; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .dialog-overlay.active .dialog-box { transform: scale(1); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Screen: Main -->
+        <div id="screen-main" class="screen main-screen active bg-white">
+            <div class="p-3 flex justify-between items-center shrink-0 border-b border-gray-50">
+                <!-- PWA Install Button -->
+                <button onclick="promptInstall()" class="p-2 text-gray-400 hover:text-blue-600 active:bg-gray-100 rounded-full transition-colors">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                </button>
+                <h1 class="text-xl font-bold text-gray-800 tracking-tight">消費小助手</h1>
+                <!-- Settings Gear -->
+                <button onclick="navTo('screen-settings')" class="p-2 text-gray-400 hover:text-gray-800 active:bg-gray-100 rounded-full transition-colors">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
+            </div>
+            
+            <div class="flex-1 flex flex-col justify-center py-2">
+                <!-- Carousel Dashboard -->
+                <div class="carousel-container" id="dashboard-carousel">
+                    <!-- Cards injected here via JS -->
+                </div>
+                
+                <div class="w-full space-y-4 px-5 mt-2">
+                    <button onclick="navTo('screen-view')" class="w-full py-4 bg-blue-500 text-white rounded-2xl text-xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-transform flex items-center justify-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>查看紀錄
+                    </button>
+                    <button onclick="navTo('screen-add')" class="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xl font-bold shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform flex items-center justify-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>獲取消費券
+                    </button>
+                    <button onclick="navTo('screen-use')" class="w-full py-4 bg-amber-500 text-white rounded-2xl text-xl font-bold shadow-lg shadow-amber-500/30 active:scale-95 transition-transform flex items-center justify-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>使用消費券
+                    </button>
+                </div>
+            </div>
+
+            <!-- Clear Button -->
+            <div class="p-4 flex justify-start shrink-0">
+                <button onclick="promptClearVouchers()" class="px-4 py-2 text-red-500 font-bold flex items-center space-x-2 active:bg-red-50 rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    <span class="text-sm">清除所有紀錄</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Screen: Settings -->
+        <div id="screen-settings" class="screen flex flex-col h-full bg-gray-50">
+            <div class="bg-white px-4 py-4 shadow-sm flex items-center border-b border-gray-100 shrink-0 z-20">
+                <button onclick="navTo('screen-main')" class="p-2 -ml-2 text-gray-600 active:bg-gray-100 rounded-full">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <h2 class="text-xl font-bold text-gray-800 ml-2">銀行設定</h2>
+            </div>
+            <div class="p-4 shrink-0 bg-white shadow-sm z-10 border-b border-gray-200">
+                <div class="flex gap-2 items-center">
+                    <input type="color" id="new-bank-color" value="#3b82f6" class="shrink-0 w-10 h-10 border-0 p-0 rounded cursor-pointer">
+                    <input type="text" id="new-bank-input" placeholder="新增銀行名稱" class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+                    <button onclick="addBank()" class="bg-blue-500 text-white px-4 py-2 rounded-xl font-bold active:bg-blue-600 transition-colors shrink-0">新增</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4">
+                <ul id="bank-list" class="space-y-2"></ul>
+            </div>
+        </div>
+
+        <!-- Screen: Get -->
+        <div id="screen-add" class="screen">
+            <div class="bg-emerald-500 px-4 py-4 shadow-sm flex justify-between items-center text-white shrink-0 z-20">
+                <div class="flex items-center">
+                    <button onclick="navTo('screen-main')" class="p-2 -ml-2 active:bg-emerald-600 rounded-full transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <h2 class="text-xl font-bold ml-2">獲取消費券</h2>
+                </div>
+                <button onclick="promptNewRound()" class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-bold active:scale-95 transition-all">新一輪</button>
+            </div>
+            <div class="scrollable-content flex flex-col gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-bold mb-2 text-sm">選擇平台 <span class="font-normal text-gray-400">(每輪最多3張)</span></label>
+                        <select id="acquire-bank" class="w-full bg-gray-50 border border-gray-200 text-gray-800 py-3 px-4 rounded-xl focus:outline-none font-bold appearance-none"></select>
+                    </div>
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-gray-700 font-bold text-sm">點擊面額 <span class="font-normal text-gray-400">(可疊加)</span></label>
+                            <button onclick="resetTempAmounts()" class="text-xs text-red-500 font-bold bg-red-50 px-2 py-1 rounded-lg">重置</button>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3" id="amount-grid"></div>
+                    </div>
+                    <div class="mb-4">
+                        <input type="text" id="acquire-remark" placeholder="📝 備註 (例如: 買餸、餐廳...)" class="w-full bg-gray-50 border border-gray-200 text-gray-800 py-3 px-4 rounded-xl focus:outline-none text-sm">
+                    </div>
+                    <button onclick="saveVouchers()" class="w-full bg-emerald-500 text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-emerald-500/30 active:bg-emerald-600 transition-colors mb-3">確認新增</button>
+                    <button onclick="markBankMissed()" class="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl text-sm active:bg-gray-200 transition-colors">😭 呢間銀行全部抽唔中</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: View -->
+        <div id="screen-view" class="screen">
+            <div class="bg-blue-500 px-4 py-4 shadow-sm flex items-center justify-between text-white shrink-0 z-20">
+                <div class="flex items-center">
+                    <button onclick="navTo('screen-main')" class="p-2 -ml-2 active:bg-blue-600 rounded-full transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <h2 class="text-xl font-bold ml-2">查看紀錄</h2>
+                </div>
+                <button onclick="calcReverse()" class="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95 shadow-sm">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V21m-7.5-5.25h7.5m-7.5-6h7.5m-12 18.75h16.5a2.25 2.25 0 002.25-2.25V5.25A2.25 2.25 0 0019.5 3H4.5A2.25 2.25 0 002.25 5.25v13.5A2.25 2.25 0 004.5 21z" /></svg>
+                </button>
+            </div>
+            <div class="p-2 bg-blue-50 flex justify-center items-center shrink-0 border-b border-blue-100 shadow-inner text-xs text-blue-700 font-bold">
+                點選未用券反向計算；向左滑動可操作
+            </div>
+            <div class="scrollable-content bg-gray-50/50 pb-20">
+                <div id="view-list" class="space-y-0"></div>
+            </div>
+        </div>
+
+        <!-- Screen: Use -->
+        <div id="screen-use" class="screen">
+            <div class="bg-amber-500 px-4 py-4 shadow-sm flex justify-between items-center text-white shrink-0 z-20">
+                <div class="flex items-center">
+                    <button onclick="navTo('screen-main')" class="p-2 -ml-2 active:bg-amber-600 rounded-full transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <h2 class="text-xl font-bold ml-2">使用消費券</h2>
+                </div>
+                <button onclick="openSmartCalc()" class="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors active:scale-95 shadow-sm">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V21m-7.5-5.25h7.5m-7.5-6h7.5m-12 18.75h16.5a2.25 2.25 0 002.25-2.25V5.25A2.25 2.25 0 0019.5 3H4.5A2.25 2.25 0 002.25 5.25v13.5A2.25 2.25 0 004.5 21z" /></svg>
+                </button>
+            </div>
+            <div class="p-3 bg-white border-b border-gray-100 shrink-0 shadow-sm flex gap-2">
+                <select id="use-filter-bank" onchange="renderUseList()" class="flex-1 bg-gray-50 border border-gray-200 text-gray-700 py-2 px-2 rounded-lg focus:outline-none text-sm font-bold appearance-none"></select>
+                <select id="use-sort" onchange="renderUseList()" class="flex-1 bg-gray-50 border border-gray-200 text-gray-700 py-2 px-2 rounded-lg focus:outline-none text-sm font-bold appearance-none">
+                    <option value="time">預設獲取順序</option>
+                    <option value="high">金額由大至小</option>
+                    <option value="low">金額由小至大</option>
+                </select>
+            </div>
+            <div class="scrollable-content bg-gray-50/50 pb-20">
+                <div id="use-list" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Custom Dialog -->
+        <div id="custom-dialog" class="dialog-overlay">
+            <div class="dialog-box text-center">
+                <div id="dialog-icon" class="flex justify-center mb-4"></div>
+                <h3 id="dialog-title" class="text-xl font-bold text-gray-800 mb-2"></h3>
+                <p id="dialog-msg" class="text-gray-500 mb-5 text-sm font-medium leading-relaxed"></p>
+                <div id="dialog-input-container" class="mb-5 hidden">
+                    <input type="number" id="dialog-input" placeholder="輸入預計消費金額" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xl text-center font-black focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="closeDialog()" class="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl active:bg-gray-200 transition-colors">取消</button>
+                    <button id="dialog-confirm" class="flex-1 py-3 text-white font-bold rounded-xl transition-colors shadow-sm">確定</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- State Management ---
+        const defaultBanks = [
+            { id: 'b1', name: "中銀", color: "#e31837" }, 
+            { id: 'b2', name: "工銀", color: "#c60000" }, 
+            { id: 'b3', name: "MPay", color: "#f58220" }, 
+            { id: 'b4', name: "支付寶", color: "#00a3fe" }, 
+            { id: 'b5', name: "豐付寶", color: "#FFC107" }
+        ];
+        
+        let banks = JSON.parse(localStorage.getItem('macau_banks')) || defaultBanks;
+        let vouchers = JSON.parse(localStorage.getItem('macau_vouchers')) || [];
+        let missedBanks = JSON.parse(localStorage.getItem('macau_missed')) || [];
+        
+        const amountTypes = [10, 20, 50, 100, 200];
+        let tempAmounts = { 10:0, 20:0, 50:0, 100:0, 200:0 };
+        let viewSelectedIds = new Set();
+        let dialogCallback = null;
+        let deferredPrompt = null;
+
+        function getWeekStr() {
+            const d = new Date(); d.setHours(0,0,0,0);
+            d.setDate(d.getDate() + 4 - (d.getDay()||7));
+            const yearStart = new Date(d.getFullYear(),0,1);
+            const week = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+            return `${d.getFullYear()}年第${week}週`;
+        }
+        let currentRound = localStorage.getItem('macau_round') || getWeekStr();
+
+        function saveData() {
+            localStorage.setItem('macau_banks', JSON.stringify(banks));
+            localStorage.setItem('macau_vouchers', JSON.stringify(vouchers));
+            localStorage.setItem('macau_missed', JSON.stringify(missedBanks));
+            localStorage.setItem('macau_round', currentRound);
+        }
+
+        // --- Custom Dialog ---
+        function openDialog({ title, msg, iconColor='blue', confirmText='確定', confirmColor='bg-blue-500', showInput=false, onConfirm }) {
+            document.getElementById('dialog-title').innerHTML = title;
+            document.getElementById('dialog-msg').innerHTML = msg;
+            
+            const iconHtml = `<div class="bg-${iconColor}-50 p-3 rounded-full text-${iconColor}-500"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>`;
+            document.getElementById('dialog-icon').innerHTML = iconHtml;
+            
+            const inputContainer = document.getElementById('dialog-input-container');
+            inputContainer.style.display = showInput ? 'block' : 'none';
+            if(showInput) document.getElementById('dialog-input').value = '';
+
+            const btn = document.getElementById('dialog-confirm');
+            btn.textContent = confirmText;
+            btn.className = `flex-1 py-3 text-white font-bold rounded-xl transition-colors shadow-sm ${confirmColor}`;
+            
+            dialogCallback = onConfirm;
+            document.getElementById('custom-dialog').classList.add('active');
+        }
+        function closeDialog() { document.getElementById('custom-dialog').classList.remove('active'); dialogCallback = null; }
+        document.getElementById('dialog-confirm').addEventListener('click', () => { if(dialogCallback) dialogCallback(); closeDialog(); });
+
+        // --- Navigation ---
+        function navTo(screenId) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            viewSelectedIds.clear();
+            
+            if(screenId === 'screen-main') renderDashboard();
+            if(screenId === 'screen-settings') renderSettings();
+            if(screenId === 'screen-add') renderGetInit();
+            if(screenId === 'screen-view') renderViewList();
+            if(screenId === 'screen-use') {
+                document.getElementById('use-filter-bank').innerHTML = '<option value="all">全部銀行</option>' + banks.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+                renderUseList();
+            }
+        }
+
+        // --- Dashboard ---
+        function renderDashboard() {
+            const container = document.getElementById('dashboard-carousel');
+            let unused = vouchers.filter(v => v.status === 'unused');
+            let total = unused.reduce((sum, v) => sum + v.amount, 0);
+            
+            // Total Card
+            let totalBkdown = amountTypes.map(amt => {
+                let count = unused.filter(v=>v.amount===amt).length;
+                return count ? `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">$${amt} x${count}</span>` : '';
+            }).join('');
+            
+            let drawnBankIds = [...new Set(vouchers.filter(v => v.round === currentRound).map(v => v.bankId))];
+            let undrawn = banks.filter(b => !drawnBankIds.includes(b.id) && !missedBanks.includes(b.id));
+            let warningHtml = undrawn.length ? `<div class="mt-3 text-xs font-bold text-red-500 bg-red-50 p-2 rounded-lg">⚠️ 未抽獎: ${undrawn.map(b=>b.name).join(', ')}</div>` : '';
+
+            let html = `
+                <div class="carousel-slide">
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm h-full flex flex-col justify-between">
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">全部剩餘總額</p>
+                        <p class="text-3xl font-black text-blue-600 mb-2">$${total}</p>
+                        <div class="flex flex-wrap gap-1.5">${totalBkdown || '<span class="text-xs text-gray-400">暫無</span>'}</div>
+                        ${warningHtml}
+                    </div>
+                </div>`;
+
+            // Bank Cards (Hide if 0)
+            banks.forEach(bank => {
+                let bankUnused = unused.filter(v => v.bankId === bank.id);
+                if(bankUnused.length > 0) {
+                    let bTotal = bankUnused.reduce((s,v)=>s+v.amount,0);
+                    let bBkdown = amountTypes.map(amt => {
+                        let count = bankUnused.filter(v=>v.amount===amt).length;
+                        return count ? `<span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-bold">$${amt} x${count}</span>` : '';
+                    }).join('');
+                    html += `
+                    <div class="carousel-slide">
+                        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm h-full flex flex-col justify-between" style="border-left: 6px solid ${bank.color}">
+                            <p class="text-xs font-bold uppercase tracking-widest mb-1" style="color:${bank.color}">${bank.name} 剩餘</p>
+                            <p class="text-3xl font-black text-gray-800 mb-2">$${bTotal}</p>
+                            <div class="flex flex-wrap gap-1.5">${bBkdown}</div>
+                        </div>
+                    </div>`;
+                }
+            });
+            container.innerHTML = html;
+        }
+
+        // --- Settings ---
+        function renderSettings() {
+            document.getElementById('bank-list').innerHTML = banks.map(b => `
+                <li class="p-3 bg-white border border-gray-100 rounded-xl flex justify-between items-center shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-5 h-5 rounded" style="background:${b.color}"></div>
+                        <span class="font-bold text-gray-700">${b.name}</span>
+                    </div>
+                    <button onclick="delBank('${b.id}')" class="p-2 text-red-400 bg-red-50 rounded-lg"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                </li>`).join('');
+        }
+        function addBank() {
+            let name = document.getElementById('new-bank-input').value.trim();
+            let color = document.getElementById('new-bank-color').value;
+            if(name) { banks.push({ id:'b'+Date.now(), name, color }); document.getElementById('new-bank-input').value=''; saveData(); renderSettings(); }
+        }
+        function delBank(id) { openDialog({ title: '刪除銀行', msg: '刪除後相關消費券將無銀行名稱。', confirmColor: 'bg-red-500', onConfirm: ()=>{ banks = banks.filter(b=>b.id!=id); saveData(); renderSettings(); }}); }
+
+        // --- Get Vouchers ---
+        function renderGetInit() {
+            document.getElementById('acquire-bank').innerHTML = banks.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+            document.getElementById('acquire-remark').value = '';
+            resetTempAmounts();
+        }
+        function resetTempAmounts() { tempAmounts = {10:0, 20:0, 50:0, 100:0, 200:0}; updateAmountGrid(); }
+        function addTempAmount(amt) { tempAmounts[amt]++; updateAmountGrid(); }
+        function updateAmountGrid() {
+            document.getElementById('amount-grid').innerHTML = amountTypes.map(amt => {
+                let count = tempAmounts[amt];
+                let badge = count ? `<div class="multiplier-badge">x${count}</div>` : '';
+                let btnCls = count ? 'bg-emerald-500 text-white border-emerald-500 scale-95' : 'bg-white text-gray-600 border-gray-200';
+                return `<div class="relative"><button onclick="addTempAmount(${amt})" class="w-full py-4 border-2 rounded-xl font-black text-xl transition-all ${btnCls}">$${amt}</button>${badge}</div>`;
+            }).join('');
+        }
+        function saveVouchers() {
+            let bankId = document.getElementById('acquire-bank').value;
+            let remark = document.getElementById('acquire-remark').value.trim();
+            let totalAdd = Object.values(tempAmounts).reduce((a,b)=>a+b,0);
+            if(!totalAdd) return openDialog({title:'錯誤', msg:'請點擊金額選擇！', iconColor:'red'});
+            
+            let currCount = vouchers.filter(v => v.bankId === bankId && v.round === currentRound).length;
+            if(currCount + totalAdd > 3) {
+                let bank = banks.find(b=>b.id===bankId).name;
+                return openDialog({title:'超過限制', msg:`${bank} 今輪已有 ${currCount} 張，最多只可再加 ${3-currCount} 張。`, iconColor:'red'});
+            }
+            
+            Object.keys(tempAmounts).forEach(amt => {
+                for(let i=0; i<tempAmounts[amt]; i++) vouchers.push({ id:'v'+Math.random(), bankId, amount:parseInt(amt), status:'unused', round:currentRound, remark, timestamp:Date.now() });
+            });
+            saveData(); navTo('screen-main');
+        }
+        function markBankMissed() {
+            let bankId = document.getElementById('acquire-bank').value;
+            if(!missedBanks.includes(bankId)) { missedBanks.push(bankId); saveData(); navTo('screen-main'); }
+        }
+        function promptNewRound() {
+            openDialog({ title: '開啟新一輪？', msg: '所有未用嘅消費券會變成「💸 失效」。', confirmColor: 'bg-emerald-500', onConfirm: ()=>{
+                vouchers.forEach(v => { if(v.status==='unused') v.status='expired'; });
+                currentRound = getWeekStr(); missedBanks = []; saveData(); navTo('screen-main');
+            }});
+        }
+
+        // --- View & Swipe Logic ---
+        let swipeState = { activeId: null, startX: 0, currentX: 0 };
+        function handleTouchStart(e, id) {
+            if(swipeState.activeId && swipeState.activeId !== id) resetSwipe(swipeState.activeId);
+            swipeState.startX = e.touches[0].clientX; swipeState.activeId = id;
+            document.getElementById(`content-${id}`).classList.add('swiping');
+        }
+        function handleTouchMove(e, id) {
+            if(swipeState.activeId !== id) return;
+            let delta = e.touches[0].clientX - swipeState.startX;
+            let el = document.getElementById(`content-${id}`);
+            let actionWidth = el.previousElementSibling.offsetWidth;
+            let tx = Math.max(-actionWidth, Math.min(0, delta));
+            el.style.transform = `translateX(${tx}px)`;
+        }
+        function handleTouchEnd(e, id) {
+            if(swipeState.activeId !== id) return;
+            let el = document.getElementById(`content-${id}`);
+            el.classList.remove('swiping');
+            let tx = new DOMMatrixReadOnly(window.getComputedStyle(el).transform).m41;
+            let actionWidth = el.previousElementSibling.offsetWidth;
+            el.style.transform = (tx < -actionWidth/2) ? `translateX(-${actionWidth}px)` : `translateX(0px)`;
+            if(tx >= -actionWidth/2) swipeState.activeId = null;
+        }
+        function resetSwipe(id) {
+            let el = document.getElementById(`content-${id}`);
+            if(el) el.style.transform = `translateX(0px)`;
+        }
+
+        function renderViewList() {
+            let sorted = [...vouchers].sort((a,b) => {
+                let o = { 'unused': 1, 'used': 2, 'expired': 2 };
+                if(o[a.status] !== o[b.status]) return o[a.status] - o[b.status];
+                return b.timestamp - a.timestamp;
+            });
+            document.getElementById('view-list').innerHTML = sorted.map(v => {
+                let bank = banks.find(b=>b.id===v.bankId) || {name:'已刪除', color:'#cbd5e1'};
+                let cl = 'swipe-content flex justify-between items-center cursor-pointer ' + (viewSelectedIds.has(v.id) ? 'view-selected-highlight ' : '');
+                let badge='', aCl='text-gray-800 amt-text', pCl='text-gray-800 platform-text', bCl=`border-left: 6px solid ${bank.color}`;
+                
+                if(v.status==='unused') cl += 'bg-white';
+                else if(v.status==='used') { cl += 'status-used'; badge = '<span class="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded ml-2 font-bold">✓ 已使用</span>'; pCl = 'text-gray-500 platform-text'; }
+                else { cl += 'status-expired'; badge = '<span class="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded ml-2 font-bold">💸 失效</span>'; aCl = 'text-gray-400 line-through amt-text'; pCl = 'text-gray-400 platform-text'; bCl = 'border-left: 6px solid #cbd5e1'; }
+                
+                let remarkHtml = v.remark ? `<div class="text-[10px] text-gray-500 mt-1">📝 ${v.remark}</div>` : '';
+                let actions = v.status==='used' ? `<button onclick="changeStatus('${v.id}', 'unused')" class="swipe-action-btn bg-amber-500">取消</button>` : '';
+                actions += `<button onclick="deleteVoucher('${v.id}')" class="swipe-action-btn bg-red-500 rounded-r-xl">刪除</button>`;
+
+                return `
+                <div class="swipe-item-container shadow-sm border border-gray-200">
+                    <div class="swipe-actions">${actions}</div>
+                    <div id="content-${v.id}" class="${cl}" style="${bCl}" ontouchstart="handleTouchStart(event, '${v.id}')" ontouchmove="handleTouchMove(event, '${v.id}')" ontouchend="handleTouchEnd(event, '${v.id}')" onclick="toggleViewSelect('${v.id}', '${v.status}')">
+                        <div class="pointer-events-none">
+                            <div class="flex items-center"><span class="font-bold text-lg ${pCl}">${bank.name}</span>${badge}</div>
+                            <p class="text-[10px] text-gray-400 font-bold tracking-wider mt-0.5">${v.round}</p>
+                            ${remarkHtml}
+                        </div>
+                        <div class="font-black text-2xl pointer-events-none ${aCl}">$${v.amount}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        function toggleViewSelect(id, status) {
+            if(status!=='unused') return;
+            if(swipeState.activeId === id) return resetSwipe(id);
+            viewSelectedIds.has(id) ? viewSelectedIds.delete(id) : viewSelectedIds.add(id);
+            renderViewList();
+        }
+        function calcReverse() {
+            if(!viewSelectedIds.size) return;
+            let sum = [...viewSelectedIds].reduce((s, id) => s + (vouchers.find(v=>v.id===id)?.amount||0), 0);
+            openDialog({title:'反向計算', msg:`要用齊呢 ${viewSelectedIds.size} 張 (共 $${sum})，<br><br><span class="text-2xl font-black text-blue-600">需消費至少 $${sum * 3}</span>`, onConfirm:()=>{ viewSelectedIds.clear(); renderViewList(); }});
+        }
+        function changeStatus(id, st) { let v = vouchers.find(x=>x.id===id); if(v){ v.status=st; saveData(); renderViewList(); } }
+        function deleteVoucher(id) { vouchers = vouchers.filter(x=>x.id!==id); saveData(); renderViewList(); }
+        function promptClearVouchers() { openDialog({title:'刪除所有紀錄', msg:'確定清除？銀行設定會保留。', confirmColor:'bg-red-500', onConfirm:()=>{ vouchers=[]; missedBanks=[]; saveData(); navTo('screen-main'); }}); }
+
+        // --- Use & Smart Calc ---
+        function renderUseList() {
+            let filterB = document.getElementById('use-filter-bank').value;
+            let sortT = document.getElementById('use-sort').value;
+            let unused = vouchers.filter(v => v.status === 'unused');
+            if(filterB !== 'all') unused = unused.filter(v => v.bankId === filterB);
+            
+            if(sortT === 'high') unused.sort((a,b)=>b.amount-a.amount);
+            else if(sortT === 'low') unused.sort((a,b)=>a.amount-b.amount);
+            else unused.sort((a,b)=>a.timestamp-b.timestamp);
+
+            document.getElementById('use-list').innerHTML = unused.map(v => {
+                let bank = banks.find(b=>b.id===v.bankId) || {name:'', color:''};
+                let remarkHtml = v.remark ? `<div class="text-[10px] text-gray-500 mt-1">📝 ${v.remark}</div>` : '';
+                return `
+                <div id="use-item-${v.id}" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center active:scale-95 transition-all cursor-pointer use-card" style="border-left: 6px solid ${bank.color}" onclick="confirmUse('${v.id}')">
+                    <div><span class="font-bold text-lg text-gray-800">${bank.name}</span><p class="text-[10px] font-bold text-gray-400 mt-0.5">${v.round}</p>${remarkHtml}</div>
+                    <div class="font-black text-2xl text-amber-500">$${v.amount}</div>
+                </div>`;
+            }).join('');
+        }
+        function confirmUse(id) { openDialog({title:'確認使用', msg:'將標記為已使用。', confirmColor:'bg-amber-500', onConfirm:()=>{ changeStatus(id, 'used'); renderUseList(); }}); }
+        
+        function openSmartCalc() { openDialog({ title:'🧮 智能計算器', msg:'預計消費幾多錢？幫你搵最抵組合！', showInput:true, confirmColor:'bg-red-500', onConfirm: runKnapsack }); }
+        function runKnapsack() {
+            let spend = parseInt(document.getElementById('dialog-input').value);
+            if(isNaN(spend) || spend <= 0) return;
+            
+            let filterB = document.getElementById('use-filter-bank').value;
+            let available = vouchers.filter(v => v.status === 'unused' && (filterB === 'all' || v.bankId === filterB));
+            
+            let maxCap = Math.floor(spend / 3);
+            let n = available.length;
+            let dp = Array(maxCap + 1).fill(0);
+            let keep = Array(n).fill(0).map(()=>Array(maxCap + 1).fill(false));
+            
+            for(let i=0; i<n; i++) {
+                let v = available[i].amount;
+                for(let w=maxCap; w>=v; w--) {
+                    if(dp[w-v] + v > dp[w]) { dp[w] = dp[w-v] + v; keep[i][w] = true; }
+                }
+            }
+            if(dp[maxCap] === 0) return openDialog({title:'結果', msg:'消費太少，用唔到任何券 (最少買 $30)'});
+            
+            let currW = maxCap, selIds = [];
+            for(let i=n-1; i>=0; i--) { if(keep[i][currW]) { selIds.push(available[i].id); currW -= available[i].amount; } }
+            
+            document.querySelectorAll('.use-card').forEach(el=>el.classList.remove('suggested-highlight'));
+            selIds.forEach(id => { let el = document.getElementById(`use-item-${id}`); if(el){ el.classList.add('suggested-highlight'); el.scrollIntoView({behavior:'smooth', block:'center'}); } });
+        }
+
+        // --- PWA Prompt ---
+        window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; });
+        function promptInstall() {
+            if(deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
+            else openDialog({title:'加入主畫面', msg:'iOS: 點擊下方分享 ➔ 加入主畫面<br>Android: 點擊右上選單 ➔ 加到主畫面'});
+        }
+
+        renderDashboard();
+    </script>
+</body>
+</html>
