@@ -295,6 +295,11 @@
                 </div>
             </div>
             
+            <div class="bg-emerald-50 px-4 py-2 flex justify-between items-center border-b border-emerald-100 shrink-0 z-10 relative">
+                <span class="text-xs font-bold text-emerald-800 tracking-wide">未用消費券對應總消費額</span>
+                <span id="stat-req-spend" class="text-sm font-black text-emerald-600">$0</span>
+            </div>
+            
             <div class="p-2 bg-blue-50 flex justify-center items-center shrink-0 border-b border-blue-100 shadow-inner">
                 <p class="text-xs text-blue-700 font-bold flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -550,6 +555,15 @@
             if (screenId === 'screen-use') { populateUseBankFilter(); renderUnusedVouchers(); }
         }
 
+        function navToUseBank(bankName) {
+            navTo('screen-use');
+            const filter = document.getElementById('use-bank-filter');
+            if (filter) {
+                filter.value = bankName;
+                renderUnusedVouchers();
+            }
+        }
+
         function buildDashboardCarousel() {
             const track = document.getElementById('dashboard-track');
             const unused = state.vouchers.filter(v => v.status === 'unused');
@@ -596,7 +610,10 @@
                 const bkDown = Object.keys(bData.counts).map(Number).sort((a,b)=>a-b).map(amt => `<span class="bg-white/80 px-2 py-1 rounded-lg text-xs font-bold text-gray-700 shadow-sm">$${amt} <span style="color:${color}">x${bData.counts[amt]}</span></span>`).join('');
                 slidesHTML += `
                 <div class="carousel-slide">
-                    <div class="bg-white p-5 rounded-2xl border-l-[6px] shadow-sm h-full flex flex-col justify-between" style="border-left-color: ${color}; border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                    <div class="bg-white p-5 rounded-2xl border-l-[6px] shadow-sm h-full flex flex-col justify-between relative" style="border-left-color: ${color}; border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                        <button onclick="navToUseBank('${bank}')" class="absolute top-4 right-4 p-2 bg-gray-50 active:bg-gray-100 rounded-full text-gray-400 transition-colors shadow-sm">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </button>
                         <div>
                             <p class="text-xs font-bold uppercase tracking-widest mb-1" style="color:${color}">${bank} 剩餘</p>
                             <p class="text-4xl font-black mb-3 drop-shadow-sm text-gray-800">$${bData.total}</p>
@@ -607,7 +624,7 @@
             });
 
             track.innerHTML = slidesHTML;
-            carouselMax = activeBanks.length; // total pages = 1 + activeBanks.length
+            carouselMax = activeBanks.length;
             carouselIdx = 0;
             updateCarouselPosition(0);
             renderCarouselDots();
@@ -877,9 +894,13 @@
                 if (v.status !== 'expired' && v.status !== 'missed') total += v.amount; 
                 if (v.status === 'used') usedAmt += v.amount; 
             });
+            let remainAmt = total - usedAmt;
             document.getElementById('stat-total').textContent = `$${total}`; 
             document.getElementById('stat-used').textContent = `$${usedAmt}`; 
-            document.getElementById('stat-remain').textContent = `$${total - usedAmt}`;
+            document.getElementById('stat-remain').textContent = `$${remainAmt}`;
+            
+            const statReqSpend = document.getElementById('stat-req-spend');
+            if (statReqSpend) statReqSpend.textContent = `$${remainAmt * 3}`;
 
             const list = document.getElementById('all-vouchers-list');
             swipeState.openItemId = null;
