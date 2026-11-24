@@ -1,0 +1,2788 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>瑪塔創想 MatataBot 兒童編程模擬器</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Fredoka & Noto Sans TC for playful, readable typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      background-color: #F2F6FC;
+      background-image: radial-gradient(#DCE6F5 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 3D Tactile Toy Block Styling */
+    .toy-block {
+      transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.22), 0 6px 12px rgba(0, 0, 0, 0.08);
+    }
+    .toy-block:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.22);
+    }
+
+    /* Signature Orange Play Button */
+    .play-btn-3d {
+      background: linear-gradient(180deg, #FF8524 0%, #FF6200 100%);
+      box-shadow: 0 6px 0 #C94900, 0 10px 20px rgba(255, 98, 0, 0.35);
+      transition: all 0.12s ease;
+    }
+    .play-btn-3d:hover:not(:disabled) {
+      filter: brightness(1.05);
+    }
+    .play-btn-3d:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #C94900, 0 4px 8px rgba(255, 98, 0, 0.3);
+    }
+    .play-btn-3d:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    /* Command Tower Scanning Light Cone */
+    @keyframes towerScan {
+      0%, 100% { opacity: 0.25; transform: scaleX(0.92); }
+      50% { opacity: 0.75; transform: scaleX(1.04); }
+    }
+    .scan-beam {
+      animation: towerScan 0.7s infinite ease-in-out;
+      transform-origin: top center;
+    }
+
+    /* Active Executing Block Glow */
+    @keyframes pulseRing {
+      0% { box-shadow: 0 0 0 0 rgba(255, 133, 36, 0.85); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 133, 36, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 133, 36, 0); }
+    }
+    .executing-slot {
+      animation: pulseRing 0.9s infinite;
+      border-color: #FF6B00 !important;
+      background-color: #FFF4EB !important;
+      transform: scale(1.05);
+      z-index: 20;
+    }
+
+    /* Robot Smooth Movement & Dance Animation */
+    .robot-wrapper {
+      transition: left 0.42s cubic-bezier(0.25, 1, 0.5, 1), top 0.42s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    .robot-rotator {
+      transition: transform 0.38s cubic-bezier(0.34, 1.4, 0.64, 1);
+    }
+    @keyframes robotDance {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      20% { transform: scale(1.15) rotate(-18deg); }
+      40% { transform: scale(1.15) rotate(18deg); }
+      60% { transform: scale(1.18) rotate(-14deg); }
+      80% { transform: scale(1.12) rotate(14deg); }
+    }
+    .animate-dance {
+      animation: robotDance 0.75s ease-in-out;
+    }
+
+    @keyframes robotBump {
+      0%, 100% { transform: translate(0, 0); }
+      25% { transform: translate(-6px, -4px); }
+      50% { transform: translate(6px, 4px); }
+      75% { transform: translate(-4px, 2px); }
+    }
+    .animate-bump {
+      animation: robotBump 0.35s ease-in-out;
+    }
+
+    @keyframes explosionFlash {
+      0% { transform: scale(0.5); opacity: 1; }
+      50% { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.9; }
+    }
+    .animate-explosion {
+      animation: explosionFlash 0.45s ease-out;
+    }
+
+    /* Floating Star & Flag */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+    .float-item {
+      animation: floatSlow 2.2s infinite ease-in-out;
+    }
+
+    /* Confetti Canvas */
+    #confetti-canvas {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+    }
+
+    /* Tablet Touch Optimizations */
+    @media (min-width: 768px) {
+      .toy-block {
+        min-height: 54px;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800 overflow-x-hidden">
+
+  <!-- Confetti Layer -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Top Navigation Header -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-[1440px] mx-auto px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-md text-white font-black text-2xl">
+          🤖
+        </div>
+        <div>
+          <h1 class="text-lg md:text-2xl font-black tracking-tight text-slate-800 leading-tight">
+            瑪塔創想 <span class="text-orange-500">MatataBot</span> 編程樂園
+          </h1>
+          <p class="text-xs text-slate-500 font-medium">10吋平板大屏版・多地域與天氣探險模擬器</p>
+        </div>
+      </div>
+
+      <!-- Right Controls: Sound, Speed, Tutorial -->
+      <div class="flex items-center gap-2.5">
+        <button id="speed-btn" onclick="toggleSpeed()" class="px-3.5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs md:text-sm font-bold flex items-center gap-1.5 transition" title="切換執行速度">
+          <span id="speed-icon" class="text-base">🐇</span>
+          <span id="speed-label" class="hidden sm:inline">正常速度</span>
+        </button>
+
+        <button id="sound-btn" onclick="toggleSound()" class="p-2.5 md:px-3.5 md:py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs md:text-sm font-bold flex items-center gap-1.5 transition" title="開關音效">
+          <span id="sound-icon" class="text-base">🔊</span>
+          <span class="hidden sm:inline">音效</span>
+        </button>
+
+        <button onclick="openHelpModal()" class="px-3.5 py-2.5 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs md:text-sm font-bold flex items-center gap-1.5 transition">
+          <span class="text-base">💡</span>
+          <span>天氣與玩法說明</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace: Optimized Side-by-Side Split for 10-inch Tablets (md:grid-cols-12) -->
+  <main class="flex-1 max-w-[1440px] w-full mx-auto px-4 md:px-6 py-4 grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+
+    <!-- LEFT COLUMN: Large Map Arena, Biomes & Weather (7 cols on tablet/desktop) -->
+    <section class="md:col-span-7 flex flex-col gap-3.5">
+
+      <!-- Level Selector Bar -->
+      <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">選擇探險關卡或自由創作</span>
+          <span id="par-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">
+            目標：到達紅旗
+          </span>
+        </div>
+        <div id="level-pills" class="flex items-center gap-2 overflow-x-auto pb-1">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+
+      <!-- Map Board Container -->
+      <div class="bg-white rounded-3xl p-4 md:p-5 shadow-md border border-slate-200/80 flex flex-col items-center relative">
+        <!-- Level Title, Biome & Weather Badges -->
+        <div class="w-full flex flex-col gap-2.5 mb-3.5 pb-3 border-b border-slate-100">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 id="level-title" class="text-lg md:text-xl font-black text-slate-800">第 1 關：森林長途出發！</h2>
+              <p id="level-desc" class="text-xs md:text-sm text-slate-500 font-medium mt-0.5">在 5×5 森林地圖中，用「前進」和「×4」倍數積木走長距離到達紅旗！</p>
+            </div>
+
+            <!-- Interactive Biome & Weather Badges -->
+            <div class="flex items-center gap-2 shrink-0">
+              <button id="biome-badge" onclick="cycleFreeBiome()" class="px-3 py-1.5 rounded-2xl text-xs md:text-sm font-black border-2 flex items-center gap-1.5 transition bg-emerald-50 border-emerald-200 text-emerald-800" title="自由創作模式可點擊切換地域或節日">
+                <span id="biome-icon" class="text-base">🌲</span>
+                <span id="biome-name">奇幻森林</span>
+              </button>
+
+              <button id="weather-badge" onclick="cycleFreeWeather()" class="px-3 py-1.5 rounded-2xl text-xs md:text-sm font-black border-2 flex items-center gap-1.5 transition bg-amber-50 border-amber-300 text-amber-800" title="自由創作模式可點擊切換天氣">
+                <span id="weather-icon" class="text-base">☀️</span>
+                <span id="weather-name">晴空萬里</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Weather Effect Hint Strip -->
+          <div class="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-xs font-bold text-slate-600">
+            <span>🌦️</span>
+            <span id="weather-rule-text">晴朗天氣：路面乾爽，水窪會曬乾成普通泥地，小車可直接通過！</span>
+          </div>
+
+          <!-- Free Mode Tools (Pen & Full Map Builder) -->
+          <div id="free-mode-controls" class="hidden flex-col gap-2 pt-1">
+            <!-- Row 1: Builder Brush Selector -->
+            <div class="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+              <span class="text-xs font-black text-slate-600 px-1.5">🛠️ 地圖建造：</span>
+              <button onclick="setFreeTool('goal')" data-tool="goal" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-orange-500 text-white shadow-xs">🚩 設終點</button>
+              <button onclick="setFreeTool('start')" data-tool="start" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">🤖 設起點</button>
+              <button onclick="setFreeTool('obstacle')" data-tool="obstacle" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">🌲 障礙</button>
+              <button onclick="setFreeTool('water')" data-tool="water" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">🌊 河流湖</button>
+              <button onclick="setFreeTool('bridge')" data-tool="bridge" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">🌉 木橋</button>
+              <button onclick="setFreeTool('trap')" data-tool="trap" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">🕳️ 陷阱</button>
+              <button onclick="setFreeTool('mine')" data-tool="mine" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">🫥 隱形雷</button>
+              <button onclick="setFreeTool('bomb')" data-tool="bomb" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">💣 倒數炸彈</button>
+              <button onclick="setFreeTool('ghost')" data-tool="ghost" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">👻 巡邏鬼</button>
+              <button onclick="setFreeTool('weatherTile')" data-tool="weatherTile" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">🧊 天氣格</button>
+              <button onclick="setFreeTool('star')" data-tool="star" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-slate-700 hover:bg-slate-50">⭐ 星星</button>
+              <button onclick="setFreeTool('erase')" data-tool="erase" class="free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white text-rose-600 hover:bg-rose-50">🧹 清除格</button>
+            </div>
+
+            <!-- Row 2: Pen Mode & Quick Clear Map -->
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="pen-toggle-btn" onclick="togglePenMode()" class="px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition flex items-center gap-1.5 bg-slate-100 border-slate-200 text-slate-700">
+                <span>🖍️</span>
+                <span id="pen-status-text">畫筆：關</span>
+              </button>
+              <div id="pen-colors" class="hidden items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                <button onclick="setPenColor('#EF4444')" class="w-5 h-5 rounded-full bg-red-500 ring-2 ring-offset-1 ring-transparent hover:scale-110 transition" data-color="#EF4444"></button>
+                <button onclick="setPenColor('#3B82F6')" class="w-5 h-5 rounded-full bg-blue-500 ring-2 ring-offset-1 ring-transparent hover:scale-110 transition" data-color="#3B82F6"></button>
+                <button onclick="setPenColor('#10B981')" class="w-5 h-5 rounded-full bg-emerald-500 ring-2 ring-offset-1 ring-transparent hover:scale-110 transition" data-color="#10B981"></button>
+                <button onclick="setPenColor('#A855F7')" class="w-5 h-5 rounded-full bg-purple-500 ring-2 ring-offset-1 ring-transparent hover:scale-110 transition" data-color="#A855F7"></button>
+              </div>
+              <button onclick="clearDrawing()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition">
+                擦掉畫線
+              </button>
+              <button onclick="clearFreeMapObjects()" class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition">
+                清空地圖機關
+              </button>
+              <span class="text-[11px] text-slate-400 font-bold ml-auto">💡 點上方可切萬聖/聖誕節日與天氣！</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enlarged Square Grid Arena for 10-inch Tablet -->
+        <div id="arena-frame" class="w-full max-w-[540px] aspect-square relative rounded-3xl overflow-hidden border-4 border-emerald-300 bg-[#EBF7E3] shadow-inner transition-colors duration-500">
+          <!-- Grid Cells Layer -->
+          <div id="map-grid" class="w-full h-full grid"></div>
+
+          <!-- SVG Pen Drawing Layer (For Geometry Drawing Mode) -->
+          <svg id="pen-svg-layer" viewBox="0 0 100 100" class="absolute inset-0 w-full h-full pointer-events-none z-10"></svg>
+
+          <!-- Patrolling Ghosts Overlay Layer -->
+          <div id="ghosts-layer" class="absolute inset-0 w-full h-full pointer-events-none z-18"></div>
+
+          <!-- Dynamic Weather Particle Overlay Canvas -->
+          <canvas id="weather-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-15"></canvas>
+
+          <!-- MatataBot Character Layer -->
+          <div id="matatabot" class="robot-wrapper absolute z-20 flex items-center justify-center pointer-events-none" style="width: 20%; height: 20%; left: 0%; top: 0%;">
+            <div id="matatabot-rotator" class="robot-rotator w-[84%] h-[84%] flex items-center justify-center relative">
+              <!-- Custom Inline SVG of MatataBot (White Robot with Yellow Dome & Clear Direction Arrow) -->
+              <svg viewBox="0 0 120 120" class="w-full h-full drop-shadow-md">
+                <!-- Direction Pointer Nose (Top = Forward) -->
+                <polygon points="60,2 48,18 72,18" fill="#FF6B00" />
+                <!-- Left & Right Wheels -->
+                <rect x="10" y="34" width="12" height="52" rx="5" fill="#334155" />
+                <rect x="98" y="34" width="12" height="52" rx="5" fill="#334155" />
+                <!-- Wheel Treads -->
+                <line x1="10" y1="46" x2="22" y2="46" stroke="#64748B" stroke-width="3" />
+                <line x1="10" y1="60" x2="22" y2="60" stroke="#64748B" stroke-width="3" />
+                <line x1="10" y1="74" x2="22" y2="74" stroke="#64748B" stroke-width="3" />
+                <line x1="98" y1="46" x2="110" y2="46" stroke="#64748B" stroke-width="3" />
+                <line x1="98" y1="60" x2="110" y2="60" stroke="#64748B" stroke-width="3" />
+                <line x1="98" y1="74" x2="110" y2="74" stroke="#64748B" stroke-width="3" />
+
+                <!-- White Robot Body -->
+                <rect x="20" y="20" width="80" height="80" rx="22" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="3" />
+                <!-- Front Orange Bumper Accent -->
+                <path d="M 38 20 L 82 20" stroke="#FF6B00" stroke-width="6" stroke-linecap="round" />
+
+                <!-- Signature Yellow Translucent Dome -->
+                <circle cx="60" cy="62" r="30" fill="#FACC15" stroke="#EAB308" stroke-width="3" />
+                <!-- Dome Glossy Highlight -->
+                <path d="M 43 46 A 22 22 0 0 1 72 42" fill="none" stroke="#FEF9C3" stroke-width="4" stroke-linecap="round" />
+
+                <!-- Cute Robot Eyes facing forward (upwards in local space) -->
+                <g id="robot-eyes-normal">
+                  <circle cx="49" cy="48" r="4.5" fill="#1E293B" />
+                  <circle cx="71" cy="48" r="4.5" fill="#1E293B" />
+                  <circle cx="50.5" cy="46.5" r="1.5" fill="#FFFFFF" />
+                  <circle cx="72.5" cy="46.5" r="1.5" fill="#FFFFFF" />
+                </g>
+                <g id="robot-eyes-happy" class="hidden">
+                  <path d="M 44 50 Q 49 43 54 50" fill="none" stroke="#1E293B" stroke-width="3" stroke-linecap="round" />
+                  <path d="M 66 50 Q 71 43 76 50" fill="none" stroke="#1E293B" stroke-width="3" stroke-linecap="round" />
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Execution / Debug Status Bar -->
+        <div id="status-banner" class="w-full mt-3.5 px-4 py-3 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-between gap-2 text-xs md:text-sm font-bold text-slate-700">
+          <div class="flex items-center gap-2">
+            <span id="status-icon" class="text-lg">🤖</span>
+            <span id="status-text">請在右邊控制板放上積木，再按橙色「執行」鍵！</span>
+          </div>
+          <button onclick="resetRobotOnly()" class="shrink-0 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 text-xs md:text-sm font-bold shadow-xs transition">
+            ↺ 小車回起點
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Command Tower, 16-Slot Control Board & Coding Blocks (5 cols on tablet/desktop) -->
+    <section class="md:col-span-5 flex flex-col gap-3.5">
+
+      <!-- Command Tower + White Control Board Assembly -->
+      <div class="bg-white rounded-3xl p-4 shadow-md border border-slate-200/80 relative overflow-hidden">
+
+        <!-- Command Tower Visual Header -->
+        <div class="flex items-center justify-between bg-slate-50 rounded-2xl p-3 mb-3 border border-slate-200/70 relative">
+          <div class="flex items-center gap-3">
+            <!-- Mini Command Tower Graphic -->
+            <div class="relative w-12 h-13 flex flex-col items-center justify-end">
+              <!-- Orange Cap -->
+              <div class="w-11 h-4 bg-gradient-to-r from-orange-500 to-orange-400 rounded-t-full shadow-xs z-10"></div>
+              <!-- Camera Eye -->
+              <div class="w-9 h-3.5 bg-slate-800 flex items-center justify-center z-10">
+                <div id="tower-led" class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8] transition-colors"></div>
+              </div>
+              <!-- White Tower Neck -->
+              <div class="w-8 h-5 bg-white border-x border-slate-300 z-10"></div>
+              <!-- Scanning Light Cone (Visible when running) -->
+              <div id="tower-scan-beam" class="hidden scan-beam absolute top-8 w-48 h-40 bg-gradient-to-b from-orange-400/35 via-amber-300/15 to-transparent pointer-events-none z-0" style="clip-path: polygon(35% 0%, 65% 0%, 100% 100%, 0% 100%);"></div>
+            </div>
+
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-black text-base md:text-lg text-slate-800">指令塔與控制板</span>
+                <span id="block-counter" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">0 / 16 塊</span>
+              </div>
+              <p id="tower-status" class="text-xs text-slate-500 font-medium">藍燈常亮：已連接小車，由上至下、左至右執行</p>
+            </div>
+          </div>
+
+          <!-- Clear Board Button -->
+          <button onclick="clearBoard()" id="clear-btn" class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs md:text-sm font-bold transition shrink-0">
+            🗑️ 清空
+          </button>
+        </div>
+
+        <!-- 4x4 Control Board Grid (16 Slots for longer tablet paths!) -->
+        <div id="control-board" class="grid grid-cols-4 gap-2 md:gap-2.5 p-2.5 bg-slate-100/90 rounded-2xl border-2 border-slate-200 relative z-10">
+          <!-- 16 slots injected by JS -->
+        </div>
+
+        <!-- Big Orange Play Button Row -->
+        <div class="mt-3.5 flex items-center gap-2.5">
+          <button id="play-btn" onclick="runProgram()" class="play-btn-3d flex-1 py-3.5 px-5 rounded-2xl text-white font-black text-lg md:text-xl tracking-wide flex items-center justify-center gap-2.5">
+            <svg viewBox="0 0 24 24" class="w-6 h-6 fill-current">
+              <polygon points="6,4 20,12 6,20" />
+            </svg>
+            <span>執行程式 (Play)</span>
+          </button>
+
+          <button id="stop-btn" onclick="stopProgram()" class="hidden py-3.5 px-5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-lg shadow-md flex items-center justify-center gap-1.5 transition">
+            <span>⏹️</span>
+            <span>停止</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Coding Blocks Drawer (Palette) -->
+      <div class="bg-white rounded-3xl p-4 shadow-md border border-slate-200/80">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="text-sm md:text-base font-black text-slate-700">🧩 點擊或拖拉積木到控制板：</span>
+          <span class="text-xs text-slate-400 font-medium">數字可疊加在指令下方</span>
+        </div>
+
+        <!-- Category 1: Motion Blocks (Green) -->
+        <div class="mb-3">
+          <div class="text-xs font-bold text-emerald-700 mb-1.5 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 移動方向積木
+          </div>
+          <div class="grid grid-cols-4 gap-2.5">
+            <button onclick="handlePaletteClick('forward')" draggable="true" ondragstart="handlePaletteDragStart(event, 'forward')"
+              class="toy-block rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white py-2.5 px-1 flex flex-col items-center justify-center gap-1 cursor-pointer">
+              <span class="text-xl md:text-2xl font-black leading-none">⬆️</span>
+              <span class="text-xs md:text-sm font-black">前進</span>
+            </button>
+
+            <button onclick="handlePaletteClick('backward')" draggable="true" ondragstart="handlePaletteDragStart(event, 'backward')"
+              class="toy-block rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white py-2.5 px-1 flex flex-col items-center justify-center gap-1 cursor-pointer">
+              <span class="text-xl md:text-2xl font-black leading-none">⬇️</span>
+              <span class="text-xs md:text-sm font-black">後退</span>
+            </button>
+
+            <button onclick="handlePaletteClick('left')" draggable="true" ondragstart="handlePaletteDragStart(event, 'left')"
+              class="toy-block rounded-2xl bg-teal-500 hover:bg-teal-400 text-white py-2.5 px-1 flex flex-col items-center justify-center gap-1 cursor-pointer">
+              <span class="text-xl md:text-2xl font-black leading-none">↪️</span>
+              <span class="text-xs md:text-sm font-black">左轉 90°</span>
+            </button>
+
+            <button onclick="handlePaletteClick('right')" draggable="true" ondragstart="handlePaletteDragStart(event, 'right')"
+              class="toy-block rounded-2xl bg-teal-500 hover:bg-teal-400 text-white py-2.5 px-1 flex flex-col items-center justify-center gap-1 cursor-pointer">
+              <span class="text-xl md:text-2xl font-black leading-none">↩️</span>
+              <span class="text-xs md:text-sm font-black">右轉 90°</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Category 2: Number Multiplier Blocks (Amber/Orange) -->
+        <div class="mb-3">
+          <div class="text-xs font-bold text-amber-700 mb-1.5 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 數字倍數積木（支持遠距離移動 ×2 ~ ×5）
+          </div>
+          <div class="grid grid-cols-5 gap-2">
+            <button onclick="handleNumberClick(2)" draggable="true" ondragstart="handleNumberDragStart(event, 2)"
+              class="toy-block rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 py-2 px-1 flex items-center justify-center font-black text-sm md:text-base cursor-pointer">
+              <span>×2</span>
+            </button>
+            <button onclick="handleNumberClick(3)" draggable="true" ondragstart="handleNumberDragStart(event, 3)"
+              class="toy-block rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 py-2 px-1 flex items-center justify-center font-black text-sm md:text-base cursor-pointer">
+              <span>×3</span>
+            </button>
+            <button onclick="handleNumberClick(4)" draggable="true" ondragstart="handleNumberDragStart(event, 4)"
+              class="toy-block rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 py-2 px-1 flex items-center justify-center font-black text-sm md:text-base cursor-pointer">
+              <span>×4</span>
+            </button>
+            <button onclick="handleNumberClick(5)" draggable="true" ondragstart="handleNumberDragStart(event, 5)"
+              class="toy-block rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 py-2 px-1 flex items-center justify-center font-black text-sm md:text-base cursor-pointer">
+              <span>×5</span>
+            </button>
+            <button onclick="handleNumberClick(1)"
+              class="toy-block rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 px-1 flex items-center justify-center font-bold text-xs cursor-pointer" title="取消數字倍數">
+              清除
+            </button>
+          </div>
+        </div>
+
+        <!-- Category 3: Loop & Fun Blocks (Yellow & Purple) -->
+        <div>
+          <div class="text-xs font-bold text-purple-700 mb-1.5 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> 循環與趣味動作積木
+          </div>
+          <div class="grid grid-cols-4 gap-2.5">
+            <button onclick="handlePaletteClick('loop_start')" draggable="true" ondragstart="handlePaletteDragStart(event, 'loop_start')"
+              class="toy-block rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-yellow-950 py-2.5 px-1 flex flex-col items-center justify-center gap-1 cursor-pointer">
+              <span class="text-lg md:text-xl font-black leading-none">🔁【</span>
+              <span class="text-xs md:text-sm font-black">循環開始</span>
+            </button>
+
+            <button onclick="handlePaletteClick('loop_end')" draggable="true" ondragstart="handlePaletteDragStart(event, 'loop_end')"
+              class="toy-block rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-yellow-950 py-2.5 px-1 flex flex-col items-center justify-center gap-1 cursor-pointer">
+              <span class="text-lg md:text-xl font-black leading-none">】🔁</span>
+              <span class="text-xs md:text-sm font-black">循環結束</span>
+            </button>
+
+            <button onclick="handlePaletteClick('dance')" draggable="true" ondragstart="handlePaletteDragStart(event, 'dance')"
+              class="toy-block rounded-2xl bg-purple-500 hover:bg-purple-400 text-white py-2.5 px-1 flex flex-col items-center justify-center gap-1 cursor-pointer">
+              <span class="text-lg md:text-xl font-black leading-none">💃</span>
+              <span class="text-xs md:text-sm font-black">跳舞慶祝</span>
+            </button>
+
+            <button onclick="handlePaletteClick('music')" draggable="true" ondragstart="handlePaletteDragStart(event, 'music')"
+              class="toy-block rounded-2xl bg-pink-500 hover:bg-pink-400 text-white py-2.5 px-1 flex flex-col items-center justify-center gap-1 cursor-pointer">
+              <span class="text-lg md:text-xl font-black leading-none">🎵</span>
+              <span class="text-xs md:text-sm font-black">演奏音樂</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Level Victory Modal -->
+  <div id="victory-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-amber-300 transform transition-all">
+      <div class="text-5xl mb-2 animate-bounce">🏆</div>
+      <h3 class="text-2xl font-black text-slate-800 mb-1">太棒了！過關成功！</h3>
+      <p id="victory-msg" class="text-sm text-slate-600 font-medium mb-4">瑪塔小車順利到達終點啦！</p>
+
+      <!-- Stars Earned Display -->
+      <div id="victory-stars" class="flex items-center justify-center gap-2 text-3xl mb-4">
+        <span>⭐</span><span>⭐</span><span>⭐</span>
+      </div>
+
+      <div id="efficiency-tip" class="text-xs font-bold bg-amber-50 text-amber-800 rounded-xl p-2.5 mb-5 border border-amber-200">
+        你只用了 3 塊積木就完成任務，真是編程小高手！
+      </div>
+
+      <div class="flex gap-2.5">
+        <button onclick="closeVictoryModal(); resetRobotOnly();" class="flex-1 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm transition">
+          再玩一次
+        </button>
+        <button id="next-level-btn" onclick="nextLevel()" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-105 text-white font-black text-sm shadow-md transition">
+          下一關 ➔
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- How-To-Play Tutorial Modal -->
+  <div id="help-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border-2 border-slate-200 max-h-[88vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-lg sm:text-xl font-black text-slate-800 flex items-center gap-2">
+          <span>📖</span> 瑪塔編程小車：地域與天氣指南
+        </h3>
+        <button onclick="closeHelpModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+        <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+          <div class="font-black text-emerald-800 mb-1">1️⃣ 方向與數字倍數（×2 ~ ×5）</div>
+          <p>「前進 / 後退」走 1 格，「左轉 / 右轉」在原地轉動方向。點擊積木可疊加 <strong>×2 到 ×5</strong> 倍數，讓小車一次走長距離！</p>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-sky-50 border border-sky-200">
+          <div class="font-black text-sky-800 mb-1">2️⃣ 四種天氣與河流湖泊互動（重要！）</div>
+          <ul class="space-y-1 mt-1 list-disc list-inside">
+            <li><strong>☀️ 晴空萬里：</strong>水窪會曬乾成泥地可直接通過；但深深的<strong>🌊 河流/湖泊</strong>必須走<strong>🌉 木橋</strong>才能過河。</li>
+            <li><strong>❄️ 飄雪結冰：</strong>踩到<strong>🧊 冰塊</strong>會向前多滑行 1 格；而且<strong>🌊 河流與湖面會結冰</strong>，小車可以直接從冰上開過去！</li>
+            <li><strong>🌧️ 陣雨積水：</strong>下雨天 <strong>💦 水窪</strong> 會積滿雨水不能踩進去，要繞路走喔！</li>
+            <li><strong>🌬️ 奇幻強風：</strong>經過 <strong>💨 順風口</strong> 時，強風會把小車往右（東方）吹動 1 格！</li>
+          </ul>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-purple-50 border border-purple-200">
+          <div class="font-black text-purple-800 mb-1">3️⃣ 🎃 萬聖節幽靈、陷阱與循環積木</div>
+          <ul class="space-y-1 mt-1 list-disc list-inside">
+            <li><strong>👻 巡邏幽靈：</strong>小車每執行一步，幽靈也會跟著移動一格！算好時機或放一塊「🎵 音樂」原地等它走過，千萬別被捉到！</li>
+            <li><strong>🕳️ 陷阱坑 / 🕸️ 蜘蛛網：</strong>踩進去會被困住，記得繞開它們。</li>
+            <li><strong>🔁 循環積木：</strong>把重複動作夾在「循環開始」與「循環結束」中間，就能輕鬆走長階梯或畫出正方形。</li>
+          </ul>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-rose-50 border border-rose-200">
+          <div class="font-black text-rose-800 mb-1">4️⃣ 💣 隱形地雷與倒數炸彈</div>
+          <ul class="space-y-1 mt-1 list-disc list-inside">
+            <li><strong>🫥 隱形地雷：</strong>預先埋在場地上且<strong>平時看不見</strong>！一旦踩中就會爆炸並現出位置，下次記得繞路避開！</li>
+            <li><strong>💣 倒數炸彈：</strong>小車每執行一步，炸彈就會倒數 1；倒數歸零時會炸毀<strong>炸彈本身與前後左右各 1 格</strong>（共 5 格十字範圍），倒數剩 1 時會亮紅燈警戒！</li>
+          </ul>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-amber-50 border border-amber-200">
+          <div class="font-black text-amber-800 mb-1">5️⃣ 🎨 自由創作全能編輯器</div>
+          <p>在「自由創作」關卡，先選好工具（如<strong>🚩 設終點、🤖 設起點、🫥 隱形雷、💣 倒數炸彈、🌊 河流湖</strong>），再點擊地圖格子就能自己設計關卡給小朋友挑戰！</p>
+        </div>
+      </div>
+
+      <button onclick="closeHelpModal()" class="mt-5 w-full py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-sm shadow-md transition">
+        我知道了，開始探險！
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. WEB AUDIO API SOUND SYNTHESIZER
+    // ==========================================
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.12, delay = 0, gainVal = 0.15) {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + duration);
+      } catch (e) {
+        // Ignore audio errors on restricted devices
+      }
+    }
+
+    const SFX = {
+      pop: () => playTone(520, 'sine', 0.08, 0, 0.12),
+      remove: () => playTone(320, 'triangle', 0.09, 0, 0.1),
+      scan: () => {
+        playTone(880, 'sine', 0.07, 0, 0.12);
+        playTone(1174, 'sine', 0.1, 0.08, 0.12);
+      },
+      step: () => {
+        playTone(260, 'triangle', 0.1, 0, 0.14);
+        playTone(330, 'triangle', 0.1, 0.09, 0.14);
+      },
+      turn: () => {
+        playTone(400, 'sine', 0.09, 0, 0.12);
+        playTone(480, 'sine', 0.09, 0.08, 0.12);
+      },
+      star: () => {
+        playTone(659, 'sine', 0.12, 0, 0.16);
+        playTone(987, 'sine', 0.2, 0.1, 0.16);
+      },
+      melody: () => {
+        const notes = [523.25, 587.33, 659.25, 783.99, 1046.5];
+        notes.forEach((n, i) => playTone(n, 'triangle', 0.14, i * 0.11, 0.15));
+      },
+      bump: () => {
+        playTone(150, 'sawtooth', 0.18, 0, 0.18);
+        playTone(110, 'sawtooth', 0.22, 0.14, 0.18);
+      },
+      slide: () => {
+        playTone(620, 'sine', 0.12, 0, 0.14);
+        playTone(880, 'sine', 0.18, 0.08, 0.14);
+      },
+      wind: () => {
+        playTone(300, 'triangle', 0.15, 0, 0.13);
+        playTone(460, 'sine', 0.2, 0.1, 0.13);
+      },
+      ghost: () => {
+        playTone(440, 'sine', 0.18, 0, 0.16);
+        playTone(311, 'sine', 0.22, 0.12, 0.16);
+        playTone(220, 'triangle', 0.28, 0.25, 0.18);
+      },
+      splash: () => {
+        playTone(220, 'sine', 0.14, 0, 0.16);
+        playTone(170, 'triangle', 0.2, 0.1, 0.16);
+      },
+      explosion: () => {
+        playTone(130, 'sawtooth', 0.22, 0, 0.22);
+        playTone(85, 'square', 0.3, 0.08, 0.2);
+        playTone(60, 'sawtooth', 0.35, 0.16, 0.18);
+      },
+      win: () => {
+        const chord = [523.25, 659.25, 783.99, 1046.5];
+        chord.forEach((n, i) => playTone(n, 'triangle', 0.22, i * 0.12, 0.18));
+      }
+    };
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇';
+      if (soundEnabled) SFX.pop();
+    }
+
+    // ==========================================
+    // 2. BIOMES, WEATHER & LEVELS DATA
+    // ==========================================
+    const BIOMES = {
+      forest: {
+        id: 'forest',
+        name: '奇幻森林',
+        icon: '🌲',
+        frameBorder: 'border-emerald-300',
+        frameBg: 'bg-[#EBF7E3]',
+        tileLight: 'bg-[#EBF7E3]',
+        tileDark: 'bg-[#DFF1D4]',
+        tileBorder: 'border-emerald-900/10',
+        badgeClass: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+        defaultObstacles: ['🌲', '🪨']
+      },
+      desert: {
+        id: 'desert',
+        name: '黃金沙漠',
+        icon: '🏜️',
+        frameBorder: 'border-amber-300',
+        frameBg: 'bg-[#FEF5E1]',
+        tileLight: 'bg-[#FEF5E1]',
+        tileDark: 'bg-[#FBE7C1]',
+        tileBorder: 'border-amber-900/10',
+        badgeClass: 'bg-amber-50 border-amber-200 text-amber-800',
+        defaultObstacles: ['🌵', '🏜️']
+      },
+      arctic: {
+        id: 'arctic',
+        name: '極地冰雪',
+        icon: '❄️',
+        frameBorder: 'border-sky-300',
+        frameBg: 'bg-[#F0F9FF]',
+        tileLight: 'bg-[#F0F9FF]',
+        tileDark: 'bg-[#E0F2FE]',
+        tileBorder: 'border-sky-900/10',
+        badgeClass: 'bg-sky-50 border-sky-200 text-sky-800',
+        defaultObstacles: ['⛄', '🏔️']
+      },
+      volcano: {
+        id: 'volcano',
+        name: '火山海島',
+        icon: '🌋',
+        frameBorder: 'border-rose-300',
+        frameBg: 'bg-[#FFF1F2]',
+        tileLight: 'bg-[#FFF1F2]',
+        tileDark: 'bg-[#FFE4E6]',
+        tileBorder: 'border-rose-900/10',
+        badgeClass: 'bg-rose-50 border-rose-200 text-rose-800',
+        defaultObstacles: ['🌋', '🪨']
+      },
+      halloween: {
+        id: 'halloween',
+        name: '🎃 萬聖驚魂夜',
+        icon: '🎃',
+        isDark: true,
+        frameBorder: 'border-purple-500',
+        frameBg: 'bg-[#2A1E3F]',
+        tileLight: 'bg-[#2E2244]',
+        tileDark: 'bg-[#382952]',
+        tileBorder: 'border-purple-300/15',
+        badgeClass: 'bg-purple-900 border-purple-400 text-amber-300',
+        defaultObstacles: ['🎃', '🪦']
+      },
+      christmas: {
+        id: 'christmas',
+        name: '🎄 聖誕奇蹟鎮',
+        icon: '🎄',
+        frameBorder: 'border-rose-400',
+        frameBg: 'bg-[#F0FDF4]',
+        tileLight: 'bg-[#F0FDF4]',
+        tileDark: 'bg-[#DCFCE7]',
+        tileBorder: 'border-emerald-900/10',
+        badgeClass: 'bg-rose-50 border-rose-300 text-rose-700',
+        defaultObstacles: ['🎄', '⛄']
+      }
+    };
+
+    const WEATHERS = {
+      sunny: {
+        id: 'sunny',
+        name: '晴空萬里',
+        icon: '☀️',
+        badgeClass: 'bg-amber-50 border-amber-300 text-amber-800',
+        ruleText: '晴朗天氣：路面乾爽，水窪會曬乾成普通泥地，小車可直接通過！'
+      },
+      snow: {
+        id: 'snow',
+        name: '飄雪結冰',
+        icon: '❄️',
+        badgeClass: 'bg-cyan-50 border-cyan-300 text-cyan-800',
+        ruleText: '飄雪天氣：踩到地圖上的「🧊 冰塊」時，小車會自動向前多滑行 1 格！'
+      },
+      rain: {
+        id: 'rain',
+        name: '陣雨積水',
+        icon: '🌧️',
+        badgeClass: 'bg-indigo-50 border-indigo-300 text-indigo-800',
+        ruleText: '陣雨天氣：「💦 水窪」已積滿雨水，小車不能踩進去，請繞路而行！'
+      },
+      wind: {
+        id: 'wind',
+        name: '奇幻強風',
+        icon: '🌬️',
+        badgeClass: 'bg-teal-50 border-teal-300 text-teal-800',
+        ruleText: '強風天氣：小車停在「💨 順風口」時，會被強風往右（東方）吹動 1 格！'
+      }
+    };
+
+    // Directions: 0 = Up (North), 1 = Right (East), 2 = Down (South), 3 = Left (West)
+    const LEVELS = [
+      {
+        id: 0,
+        shortName: '第 1 關',
+        title: '第 1 關：森林長途出發！',
+        desc: '在 5×5 森林地圖中，用「前進」和「×4」倍數積木走長距離到達紅旗！',
+        biome: 'forest',
+        weather: 'sunny',
+        par: 3,
+        size: 5,
+        start: { r: 4, c: 0, dir: 1 },
+        goal: { r: 2, c: 4 },
+        obstacles: [{ r: 3, c: 2, icon: '🌲' }],
+        specialTiles: [],
+        stars: [{ r: 4, c: 2 }]
+      },
+      {
+        id: 1,
+        shortName: '第 2 關',
+        title: '第 2 關：穿越黃金大沙漠',
+        desc: '沙漠地圖變得更大（6×6）了！繞過仙人掌，收集兩顆星星到達綠洲紅旗。',
+        biome: 'desert',
+        weather: 'sunny',
+        par: 5,
+        size: 6,
+        start: { r: 5, c: 0, dir: 0 },
+        goal: { r: 3, c: 4 },
+        obstacles: [
+          { r: 3, c: 1, icon: '🌵' },
+          { r: 2, c: 2, icon: '🏜️' },
+          { r: 4, c: 3, icon: '🌵' }
+        ],
+        specialTiles: [],
+        stars: [{ r: 1, c: 0 }, { r: 1, c: 3 }]
+      },
+      {
+        id: 2,
+        shortName: '第 3 關',
+        title: '第 3 關：極地飄雪滑冰場',
+        desc: '下雪啦！踩到「🧊 冰塊」會自動向前滑行 1 格，算好距離讓小車滑向紅旗吧！',
+        biome: 'arctic',
+        weather: 'snow',
+        par: 5,
+        size: 6,
+        start: { r: 4, c: 0, dir: 1 },
+        goal: { r: 1, c: 5 },
+        obstacles: [
+          { r: 4, c: 4, icon: '⛄' },
+          { r: 2, c: 2, icon: '🏔️' }
+        ],
+        specialTiles: [
+          { r: 4, c: 2, type: 'ice' },
+          { r: 2, c: 3, type: 'ice' }
+        ],
+        stars: [{ r: 4, c: 3 }]
+      },
+      {
+        id: 3,
+        shortName: '第 4 關',
+        title: '第 4 關：森林陣雨避水窪',
+        desc: '森林下起陣雨，地上的「💦 水窪」積滿了水！小心繞開水窪和大樹前進。',
+        biome: 'forest',
+        weather: 'rain',
+        par: 10,
+        size: 6,
+        start: { r: 5, c: 1, dir: 0 },
+        goal: { r: 0, c: 4 },
+        obstacles: [
+          { r: 4, c: 3, icon: '🌲' },
+          { r: 1, c: 2, icon: '🪨' }
+        ],
+        specialTiles: [
+          { r: 3, c: 1, type: 'puddle' },
+          { r: 1, c: 3, type: 'puddle' }
+        ],
+        stars: [{ r: 4, c: 2 }, { r: 1, c: 4 }]
+      },
+      {
+        id: 4,
+        shortName: '第 5 關',
+        title: '第 5 關：沙漠強風順風車',
+        desc: '沙漠刮起強風！經過「💨 順風口」時會被往右吹動 1 格，善用風力節省步數！',
+        biome: 'desert',
+        weather: 'wind',
+        par: 4,
+        size: 6,
+        start: { r: 5, c: 0, dir: 0 },
+        goal: { r: 1, c: 4 },
+        obstacles: [
+          { r: 2, c: 0, icon: '🌵' },
+          { r: 2, c: 2, icon: '🏜️' }
+        ],
+        specialTiles: [
+          { r: 3, c: 0, type: 'wind' },
+          { r: 1, c: 1, type: 'wind' }
+        ],
+        stars: [{ r: 3, c: 1 }, { r: 1, c: 2 }]
+      },
+      {
+        id: 5,
+        shortName: '第 6 關',
+        title: '第 6 關：河流木橋與陷阱探險',
+        desc: '前面有深深的「🌊 河流」和「🕳️ 陷阱坑」！走過「🌉 木橋」並避開陷阱到達紅旗吧！',
+        biome: 'forest',
+        weather: 'sunny',
+        par: 9,
+        size: 6,
+        start: { r: 5, c: 0, dir: 0 },
+        goal: { r: 0, c: 4 },
+        obstacles: [
+          { r: 5, c: 2, icon: '🌲' },
+          { r: 1, c: 4, icon: '🪨' }
+        ],
+        waterTiles: [
+          { r: 3, c: 0, kind: 'river', hasBridge: false },
+          { r: 3, c: 1, kind: 'river', hasBridge: false },
+          { r: 3, c: 2, kind: 'river', hasBridge: true },
+          { r: 3, c: 3, kind: 'river', hasBridge: false },
+          { r: 3, c: 4, kind: 'river', hasBridge: false },
+          { r: 3, c: 5, kind: 'river', hasBridge: false }
+        ],
+        traps: [
+          { r: 4, c: 3, type: 'pit' },
+          { r: 2, c: 3, type: 'pit' },
+          { r: 1, c: 1, type: 'pit' }
+        ],
+        ghosts: [],
+        specialTiles: [],
+        stars: [{ r: 4, c: 2 }, { r: 1, c: 2 }]
+      },
+      {
+        id: 6,
+        shortName: '第 7 關',
+        title: '第 7 關：火山長階梯循環',
+        desc: '用「循環開始 🔁【」和「循環結束 】🔁」重複走樓梯，一口氣登上 6×6 火山山頂！',
+        biome: 'volcano',
+        weather: 'sunny',
+        par: 6,
+        size: 6,
+        start: { r: 5, c: 0, dir: 0 },
+        goal: { r: 1, c: 4 },
+        obstacles: [
+          { r: 5, c: 1, icon: '🌋' },
+          { r: 4, c: 2, icon: '🌋' },
+          { r: 3, c: 3, icon: '🌋' },
+          { r: 2, c: 4, icon: '🌋' }
+        ],
+        waterTiles: [],
+        traps: [],
+        ghosts: [],
+        specialTiles: [],
+        stars: [{ r: 4, c: 1 }, { r: 2, c: 3 }]
+      },
+      {
+        id: 7,
+        shortName: '🎃 萬聖節',
+        title: '第 8 關：🎃 萬聖節幽靈大逃脫',
+        desc: '小心！「👻 小幽靈」會在城堡裡來回巡邏捉人，還要避開「🕸️ 蜘蛛網陷阱」拿到糖果星星！',
+        biome: 'halloween',
+        weather: 'wind',
+        par: 14,
+        size: 6,
+        start: { r: 5, c: 0, dir: 1 },
+        goal: { r: 0, c: 5 },
+        obstacles: [
+          { r: 4, c: 1, icon: '🎃' },
+          { r: 4, c: 3, icon: '🪦' },
+          { r: 1, c: 2, icon: '🎃' },
+          { r: 1, c: 4, icon: '🪦' }
+        ],
+        waterTiles: [],
+        traps: [
+          { r: 5, c: 4, type: 'web' },
+          { r: 2, c: 0, type: 'web' }
+        ],
+        ghosts: [
+          { r: 3, c: 3, axis: 'h', min: 1, max: 4, step: -1 },
+          { r: 0, c: 4, axis: 'v', min: 0, max: 2, step: 1 }
+        ],
+        specialTiles: [],
+        stars: [{ r: 5, c: 2 }, { r: 2, c: 3 }]
+      },
+      {
+        id: 8,
+        shortName: '🎄 聖誕節',
+        title: '第 9 關：🎄 聖誕結冰湖慶典',
+        desc: '下雪啦！湖面結成了厚厚的冰層，直接開過結冰湖到達聖誕紅旗，並「演奏音樂」或「跳舞」慶祝！',
+        biome: 'christmas',
+        weather: 'snow',
+        par: 8,
+        size: 6,
+        requireFun: true,
+        start: { r: 5, c: 0, dir: 0 },
+        goal: { r: 1, c: 5 },
+        obstacles: [
+          { r: 4, c: 1, icon: '🎄' },
+          { r: 1, c: 1, icon: '⛄' },
+          { r: 4, c: 4, icon: '🎁' }
+        ],
+        waterTiles: [
+          { r: 2, c: 2, kind: 'lake', hasBridge: false },
+          { r: 2, c: 3, kind: 'lake', hasBridge: false },
+          { r: 3, c: 2, kind: 'lake', hasBridge: false },
+          { r: 3, c: 3, kind: 'lake', hasBridge: false }
+        ],
+        traps: [],
+        ghosts: [],
+        specialTiles: [],
+        stars: [{ r: 3, c: 3 }, { r: 1, c: 3 }]
+      },
+      {
+        id: 9,
+        shortName: '💣 地雷炸彈',
+        title: '第 10 關：💣 隱形地雷與倒數炸彈',
+        desc: '場上埋有「看不見的地雷」，還有倒數炸彈會炸毀「前後左右一格」！算好步數避開爆破區吧！',
+        biome: 'volcano',
+        weather: 'sunny',
+        par: 11,
+        size: 6,
+        start: { r: 5, c: 0, dir: 0 },
+        goal: { r: 0, c: 5 },
+        obstacles: [
+          { r: 0, c: 2, icon: '🪨' },
+          { r: 4, c: 4, icon: '🌋' }
+        ],
+        waterTiles: [],
+        traps: [],
+        mines: [
+          { r: 1, c: 2 },
+          { r: 3, c: 4 }
+        ],
+        bombs: [
+          { r: 3, c: 1, timer: 3 }
+        ],
+        ghosts: [],
+        specialTiles: [],
+        stars: [{ r: 0, c: 0 }, { r: 0, c: 3 }]
+      },
+      {
+        id: 10,
+        shortName: '🎨 自由創作',
+        title: '自由創作：自訂起終點・地雷炸彈・節日地圖',
+        desc: '點選下方「設終點、設起點、隱形雷、倒數炸彈、河流湖」自由設計關卡，或切換節日與畫筆！',
+        biome: 'forest',
+        weather: 'sunny',
+        par: null,
+        isFreeMode: true,
+        size: 6,
+        start: { r: 4, c: 1, dir: 0 },
+        goal: { r: 1, c: 4 },
+        obstacles: [],
+        waterTiles: [],
+        traps: [],
+        mines: [],
+        bombs: [],
+        ghosts: [],
+        specialTiles: [],
+        stars: []
+      }
+    ];
+
+    // ==========================================
+    // 3. APPLICATION STATE
+    // ==========================================
+    const MAX_SLOTS = 16; // 4 rows x 4 columns for larger tablet maps
+    let currentLevelIdx = 0;
+    let completedLevels = new Set();
+
+    // Board slots array (length 16, each item null or { type, count })
+    let slots = new Array(MAX_SLOTS).fill(null);
+    let selectedSlotIdx = null;
+    let isRunning = false;
+    let stopRequested = false;
+    let slowMode = false;
+
+    // Map, Biome, Weather & Robot runtime state
+    let gridSize = 5;
+    let currentBiome = 'forest';
+    let currentWeather = 'sunny';
+    let robotState = { r: 0, c: 0, dir: 1, visualDeg: 90 };
+    let activeObstacles = [];
+    let activeWaterTiles = [];   // { r, c, kind: 'river' | 'lake', hasBridge: boolean }
+    let activeTraps = [];        // { r, c, type: 'pit' | 'web' }
+    let initialMines = [];       // Blueprint for hidden landmines: { r, c }
+    let activeMines = [];        // Runtime landmines: { r, c, triggered: boolean }
+    let initialBombs = [];       // Blueprint for countdown bombs: { r, c, timer }
+    let activeBombs = [];        // Runtime bombs: { r, c, timer, exploded: boolean }
+    let explosionFlashCells = []; // Temporary blast cross cells [{ r, c }]
+    let initialGhosts = [];      // Blueprint for resetting ghosts
+    let activeGhosts = [];       // Runtime patrolling ghosts
+    let activeSpecialTiles = []; // { r, c, type: 'ice' | 'puddle' | 'wind' }
+    let activeStars = [];
+    let collectedStars = new Set();
+    let goalPos = null;
+    let freeBuildTool = 'goal';  // Current active builder tool in Free Mode
+
+    // Free Mode Pen Drawing State
+    let penEnabled = false;
+    let penColor = '#EF4444';
+    let penSegments = []; // Array of { x1, y1, x2, y2, color }
+
+    // Block Metadata Dictionary
+    const BLOCK_INFO = {
+      forward:    { label: '前進', icon: '⬆️', bg: 'bg-emerald-500', text: 'text-white', repeatable: true },
+      backward:   { label: '後退', icon: '⬇️', bg: 'bg-emerald-500', text: 'text-white', repeatable: true },
+      left:       { label: '左轉', icon: '↪️', bg: 'bg-teal-500',    text: 'text-white', repeatable: true },
+      right:      { label: '右轉', icon: '↩️', bg: 'bg-teal-500',    text: 'text-white', repeatable: true },
+      loop_start: { label: '循環開', icon: '🔁【', bg: 'bg-yellow-400', text: 'text-yellow-950', repeatable: true },
+      loop_end:   { label: '循環關', icon: '】🔁', bg: 'bg-yellow-400', text: 'text-yellow-950', repeatable: false },
+      dance:      { label: '跳舞', icon: '💃', bg: 'bg-purple-500',  text: 'text-white', repeatable: true },
+      music:      { label: '音樂', icon: '🎵', bg: 'bg-pink-500',    text: 'text-white', repeatable: true }
+    };
+
+    // ==========================================
+    // 4. INITIALIZATION & RENDERING
+    // ==========================================
+    function init() {
+      renderLevelPills();
+      startWeatherLoop();
+      loadLevel(0);
+    }
+
+    function renderLevelPills() {
+      const container = document.getElementById('level-pills');
+      container.innerHTML = '';
+      LEVELS.forEach((lvl, idx) => {
+        const isCurrent = idx === currentLevelIdx;
+        const isDone = completedLevels.has(idx);
+        const btn = document.createElement('button');
+        btn.onclick = () => {
+          if (!isRunning) loadLevel(idx);
+        };
+        btn.className = `shrink-0 px-3 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1 border-2 ${
+          isCurrent
+            ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+            : isDone
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
+            : 'bg-slate-100 border-transparent text-slate-600 hover:bg-slate-200'
+        }`;
+        btn.innerHTML = `${isDone && !isCurrent ? '✅ ' : ''}${lvl.shortName}`;
+        container.appendChild(btn);
+      });
+    }
+
+    function loadLevel(idx) {
+      stopProgram();
+      currentLevelIdx = idx;
+      const lvl = LEVELS[idx];
+      gridSize = lvl.size;
+      currentBiome = lvl.biome;
+      currentWeather = lvl.weather;
+
+      // Update Header Info
+      document.getElementById('level-title').textContent = lvl.title;
+      document.getElementById('level-desc').textContent = lvl.desc;
+      updateBiomeAndWeatherUI();
+
+      const parBadge = document.getElementById('par-badge');
+      const freeControls = document.getElementById('free-mode-controls');
+
+      if (lvl.isFreeMode) {
+        parBadge.classList.add('hidden');
+        freeControls.classList.remove('hidden');
+        freeControls.classList.add('flex');
+      } else {
+        parBadge.classList.remove('hidden');
+        parBadge.textContent = lvl.requireFun
+          ? `目標：到達紅旗 + 音樂/跳舞`
+          : `目標：到達紅旗（建議 ≤ ${lvl.par} 塊）`;
+        freeControls.classList.add('hidden');
+        freeControls.classList.remove('flex');
+        penEnabled = false;
+      }
+
+      // Deep clone map items
+      activeObstacles = lvl.obstacles.map(o => ({ ...o }));
+      activeWaterTiles = (lvl.waterTiles || []).map(w => ({ ...w }));
+      activeTraps = (lvl.traps || []).map(t => ({ ...t }));
+      initialMines = (lvl.mines || []).map(m => ({ ...m }));
+      initialBombs = (lvl.bombs || []).map(b => ({ ...b }));
+      initialGhosts = (lvl.ghosts || []).map(g => ({ ...g }));
+      activeSpecialTiles = (lvl.specialTiles || []).map(t => ({ ...t }));
+      activeStars = lvl.stars.map(s => ({ ...s }));
+      goalPos = lvl.goal ? { ...lvl.goal } : null;
+      penSegments = [];
+      renderPenLines();
+      if (lvl.isFreeMode) setFreeTool(freeBuildTool);
+
+      // Clear board when switching levels
+      slots = new Array(MAX_SLOTS).fill(null);
+      selectedSlotIdx = null;
+
+      resetRobotOnly();
+      renderLevelPills();
+      renderControlBoard();
+    }
+
+    function updateBiomeAndWeatherUI() {
+      const b = BIOMES[currentBiome];
+      const w = WEATHERS[currentWeather];
+      const lvl = LEVELS[currentLevelIdx];
+
+      const biomeBtn = document.getElementById('biome-badge');
+      document.getElementById('biome-icon').textContent = b.icon;
+      document.getElementById('biome-name').textContent = b.name;
+      biomeBtn.className = `px-3 py-1.5 rounded-2xl text-xs md:text-sm font-black border-2 flex items-center gap-1.5 transition ${b.badgeClass} ${
+        lvl.isFreeMode ? 'cursor-pointer hover:scale-105 shadow-xs' : 'cursor-default'
+      }`;
+
+      const weatherBtn = document.getElementById('weather-badge');
+      document.getElementById('weather-icon').textContent = w.icon;
+      document.getElementById('weather-name').textContent = w.name;
+      weatherBtn.className = `px-3 py-1.5 rounded-2xl text-xs md:text-sm font-black border-2 flex items-center gap-1.5 transition ${w.badgeClass} ${
+        lvl.isFreeMode ? 'cursor-pointer hover:scale-105 shadow-xs' : 'cursor-default'
+      }`;
+
+      document.getElementById('weather-rule-text').textContent = w.ruleText;
+
+      const frame = document.getElementById('arena-frame');
+      frame.className = `w-full max-w-[540px] aspect-square relative rounded-3xl overflow-hidden border-4 ${b.frameBorder} ${b.frameBg} shadow-inner transition-colors duration-500`;
+    }
+
+    function cycleFreeBiome() {
+      if (!LEVELS[currentLevelIdx].isFreeMode || isRunning) return;
+      const keys = Object.keys(BIOMES);
+      currentBiome = keys[(keys.indexOf(currentBiome) + 1) % keys.length];
+      SFX.pop();
+      updateBiomeAndWeatherUI();
+      renderMapGrid();
+    }
+
+    function cycleFreeWeather() {
+      if (!LEVELS[currentLevelIdx].isFreeMode || isRunning) return;
+      const keys = Object.keys(WEATHERS);
+      currentWeather = keys[(keys.indexOf(currentWeather) + 1) % keys.length];
+      SFX.pop();
+      updateBiomeAndWeatherUI();
+      renderMapGrid();
+    }
+
+    function resetRobotOnly() {
+      const lvl = LEVELS[currentLevelIdx];
+      collectedStars.clear();
+      activeMines = initialMines.map(m => ({ ...m, triggered: false }));
+      activeBombs = initialBombs.map(b => ({ ...b, exploded: false }));
+      explosionFlashCells = [];
+      activeGhosts = initialGhosts.map(g => ({ ...g }));
+      robotState = {
+        r: lvl.start.r,
+        c: lvl.start.c,
+        dir: lvl.start.dir,
+        visualDeg: lvl.start.dir * 90
+      };
+      setHappyEyes(false);
+      renderMapGrid();
+      renderGhosts(false);
+      updateRobotPosition(false);
+      clearExecutingHighlight();
+      setStatus('🤖', '準備就緒！排好積木後按橙色「執行」鍵吧。', 'neutral');
+    }
+
+    function getBombCrossCells(r, c) {
+      const candidates = [
+        { r, c },
+        { r: r - 1, c },
+        { r: r + 1, c },
+        { r, c: c - 1 },
+        { r, c: c + 1 }
+      ];
+      return candidates.filter(p => p.r >= 0 && p.r < gridSize && p.c >= 0 && p.c < gridSize);
+    }
+
+    function renderMapGrid() {
+      const grid = document.getElementById('map-grid');
+      grid.style.gridTemplateColumns = `repeat(${gridSize}, minmax(0, 1fr))`;
+      grid.style.gridTemplateRows = `repeat(${gridSize}, minmax(0, 1fr))`;
+      grid.innerHTML = '';
+
+      const lvl = LEVELS[currentLevelIdx];
+      const biome = BIOMES[currentBiome];
+
+      // Precompute imminent bomb blast cells (timer === 1) for visual warning
+      const dangerSet = new Set();
+      activeBombs.forEach(b => {
+        if (!b.exploded && b.timer === 1) {
+          getBombCrossCells(b.r, b.c).forEach(pt => dangerSet.add(`${pt.r},${pt.c}`));
+        }
+      });
+
+      const flashSet = new Set(explosionFlashCells.map(pt => `${pt.r},${pt.c}`));
+
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          const cell = document.createElement('div');
+          const isChecker = (r + c) % 2 === 1;
+          const isDanger = dangerSet.has(`${r},${c}`);
+          cell.className = `relative flex items-center justify-center border ${biome.tileBorder} transition-colors ${
+            isDanger
+              ? 'bg-rose-500/25 border-rose-400'
+              : isChecker
+              ? biome.tileDark
+              : biome.tileLight
+          } ${lvl.isFreeMode ? 'cursor-pointer hover:brightness-95' : ''}`;
+
+          // Free mode click tile uses currently selected Free Mode builder tool
+          if (lvl.isFreeMode) {
+            cell.onclick = () => handleFreeMapCellClick(r, c);
+          }
+
+          // Start Pad Marker
+          if (lvl.start.r === r && lvl.start.c === c) {
+            const startPad = document.createElement('div');
+            startPad.className = biome.isDark
+              ? 'w-[70%] h-[70%] rounded-full border-2 border-dashed border-amber-400/80 bg-amber-400/20 flex items-center justify-center text-xs font-black text-amber-300 z-5'
+              : 'w-[70%] h-[70%] rounded-full border-2 border-dashed border-sky-400/80 bg-sky-100/70 flex items-center justify-center text-xs font-black text-sky-700 z-5';
+            startPad.textContent = '起點';
+            cell.appendChild(startPad);
+          }
+
+          // River / Lake Water Tile (Freezes in Snow weather, or walkable via Bridge!)
+          const water = activeWaterTiles.find(w => w.r === r && w.c === c);
+          if (water) {
+            const isFrozen = currentWeather === 'snow';
+            const waterEl = document.createElement('div');
+            if (isFrozen) {
+              waterEl.className = 'w-[92%] h-[92%] rounded-xl bg-cyan-200/85 border-2 border-cyan-400 flex flex-col items-center justify-center select-none';
+              waterEl.innerHTML = `<span class="text-lg md:text-xl leading-none">❄️</span><span class="text-[9px] font-black text-cyan-900">結冰水面</span>`;
+            } else {
+              waterEl.className = 'w-[94%] h-[94%] rounded-xl bg-blue-500/80 border-2 border-blue-600/70 flex flex-col items-center justify-center select-none shadow-inner';
+              waterEl.innerHTML = water.hasBridge
+                ? `<span class="text-2xl md:text-3xl leading-none drop-shadow-xs">🌉</span><span class="text-[9px] font-black text-amber-100 bg-amber-900/60 px-1 rounded">木橋</span>`
+                : `<span class="text-xl md:text-2xl leading-none">🌊</span><span class="text-[9px] font-black text-white/95">${water.kind === 'lake' ? '湖泊' : '河流'}</span>`;
+            }
+            cell.appendChild(waterEl);
+          }
+
+          // Trap Tile (Pitfall / Spiderweb)
+          const trap = activeTraps.find(t => t.r === r && t.c === c);
+          if (trap) {
+            const trapEl = document.createElement('div');
+            if (trap.type === 'web') {
+              trapEl.className = 'w-[84%] h-[84%] rounded-xl bg-purple-900/35 border-2 border-dashed border-purple-300/70 flex flex-col items-center justify-center select-none';
+              trapEl.innerHTML = `<span class="text-xl md:text-2xl leading-none">🕸️</span><span class="text-[9px] font-black text-purple-200">陷阱網</span>`;
+            } else {
+              trapEl.className = 'w-[82%] h-[82%] rounded-full bg-stone-800/85 border-2 border-stone-600 flex flex-col items-center justify-center select-none shadow-inner';
+              trapEl.innerHTML = `<span class="text-lg md:text-xl leading-none">🕳️</span><span class="text-[9px] font-black text-stone-200">陷阱坑</span>`;
+            }
+            cell.appendChild(trapEl);
+          }
+
+          // Hidden Landmine (Invisible during play; visible when triggered or while editing in Free Mode!)
+          const mine = activeMines.find(m => m.r === r && m.c === c);
+          if (mine) {
+            if (mine.triggered) {
+              const mineEl = document.createElement('div');
+              mineEl.className = 'w-[86%] h-[86%] rounded-full bg-rose-600/85 border-2 border-amber-300 flex flex-col items-center justify-center select-none shadow-md animate-explosion z-15';
+              mineEl.innerHTML = `<span class="text-xl md:text-2xl leading-none">💥</span><span class="text-[9px] font-black text-white">地雷爆破</span>`;
+              cell.appendChild(mineEl);
+            } else if (lvl.isFreeMode && !isRunning) {
+              const editMineEl = document.createElement('div');
+              editMineEl.className = 'w-[82%] h-[82%] rounded-full bg-slate-800/20 border-2 border-dashed border-rose-500/70 flex flex-col items-center justify-center select-none';
+              editMineEl.innerHTML = `<span class="text-lg md:text-xl leading-none opacity-75">💣</span><span class="text-[9px] font-black text-rose-700">隱形雷</span>`;
+              cell.appendChild(editMineEl);
+            }
+          }
+
+          // Countdown Bomb (Explodes center + 1 tile Up/Down/Left/Right when timer reaches 0)
+          const bomb = activeBombs.find(b => b.r === r && b.c === c && !b.exploded);
+          if (bomb) {
+            const isCritical = bomb.timer === 1;
+            const bombEl = document.createElement('div');
+            bombEl.className = `w-[86%] h-[86%] rounded-2xl border-2 flex flex-col items-center justify-center select-none shadow-sm relative ${
+              isCritical
+                ? 'bg-rose-600 border-amber-300 text-white animate-pulse'
+                : 'bg-slate-800 border-amber-400 text-white'
+            }`;
+            bombEl.innerHTML = `
+              <span class="text-xl md:text-2xl leading-none">💣</span>
+              <span class="mt-0.5 px-1.5 rounded-full text-[10px] font-black ${
+                isCritical ? 'bg-amber-300 text-rose-900' : 'bg-amber-400 text-slate-900'
+              }">倒數 ${bomb.timer}</span>
+            `;
+            cell.appendChild(bombEl);
+          }
+
+          // Active Explosion Flash Overlay
+          if (flashSet.has(`${r},${c}`)) {
+            const flashEl = document.createElement('div');
+            flashEl.className = 'absolute inset-0 bg-orange-500/65 flex items-center justify-center z-25 animate-explosion pointer-events-none';
+            flashEl.innerHTML = `<span class="text-3xl sm:text-4xl drop-shadow-md">💥</span>`;
+            cell.appendChild(flashEl);
+          }
+
+          // Special Environmental Tile (Ice / Puddle / Wind)
+          const sp = activeSpecialTiles.find(t => t.r === r && t.c === c);
+          if (sp) {
+            const spEl = document.createElement('div');
+            if (sp.type === 'ice') {
+              spEl.className = 'w-[84%] h-[84%] rounded-xl bg-cyan-200/75 border-2 border-cyan-300 flex flex-col items-center justify-center select-none';
+              spEl.innerHTML = `<span class="text-xl md:text-2xl leading-none">🧊</span><span class="text-[9px] font-black text-cyan-800">滑冰</span>`;
+            } else if (sp.type === 'puddle') {
+              const isWet = currentWeather === 'rain';
+              spEl.className = `w-[84%] h-[84%] rounded-full border-2 flex flex-col items-center justify-center select-none transition-colors ${
+                isWet ? 'bg-blue-400/50 border-blue-500' : 'bg-amber-700/20 border-amber-700/30'
+              }`;
+              spEl.innerHTML = isWet
+                ? `<span class="text-xl md:text-2xl leading-none">💦</span><span class="text-[9px] font-black text-blue-900">積水</span>`
+                : `<span class="text-lg md:text-xl leading-none opacity-65">🤎</span><span class="text-[9px] font-black text-amber-900/70">乾泥</span>`;
+            } else if (sp.type === 'wind') {
+              spEl.className = 'w-[84%] h-[84%] rounded-xl bg-teal-200/65 border-2 border-dashed border-teal-400 flex flex-col items-center justify-center select-none';
+              spEl.innerHTML = `<span class="text-xl md:text-2xl leading-none">💨</span><span class="text-[9px] font-black text-teal-900">向東吹</span>`;
+            }
+            cell.appendChild(spEl);
+          }
+
+          // Obstacle
+          const obs = activeObstacles.find(o => o.r === r && o.c === c);
+          if (obs) {
+            const obsEl = document.createElement('span');
+            obsEl.className = 'text-2xl sm:text-4xl select-none drop-shadow-xs';
+            obsEl.textContent = obs.icon;
+            cell.appendChild(obsEl);
+          }
+
+          // Star Collectible
+          const starIdx = activeStars.findIndex(s => s.r === r && s.c === c);
+          if (starIdx !== -1 && !collectedStars.has(starIdx)) {
+            const starEl = document.createElement('span');
+            starEl.className = 'text-2xl sm:text-3xl float-item select-none drop-shadow-xs z-10';
+            starEl.textContent = currentBiome === 'halloween' ? '🍬' : '⭐';
+            cell.appendChild(starEl);
+          }
+
+          // Target Flag
+          if (goalPos && goalPos.r === r && goalPos.c === c) {
+            const flagEl = document.createElement('span');
+            flagEl.className = 'text-2xl sm:text-4xl float-item select-none drop-shadow-sm z-10';
+            flagEl.textContent = '🚩';
+            cell.appendChild(flagEl);
+          }
+
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function setFreeTool(toolName) {
+      freeBuildTool = toolName;
+      document.querySelectorAll('.free-tool-btn').forEach(btn => {
+        if (btn.dataset.tool === toolName) {
+          btn.className = 'free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-orange-500 text-white shadow-xs';
+        } else {
+          const isErase = btn.dataset.tool === 'erase';
+          btn.className = `free-tool-btn px-2.5 py-1.5 rounded-xl text-xs font-black transition bg-white ${
+            isErase ? 'text-rose-600 hover:bg-rose-50' : 'text-slate-700 hover:bg-slate-50'
+          }`;
+        }
+      });
+    }
+
+    function clearCellItems(r, c) {
+      const obsIdx = activeObstacles.findIndex(o => o.r === r && o.c === c);
+      if (obsIdx !== -1) activeObstacles.splice(obsIdx, 1);
+
+      const waterIdx = activeWaterTiles.findIndex(w => w.r === r && w.c === c);
+      if (waterIdx !== -1) activeWaterTiles.splice(waterIdx, 1);
+
+      const trapIdx = activeTraps.findIndex(t => t.r === r && t.c === c);
+      if (trapIdx !== -1) activeTraps.splice(trapIdx, 1);
+
+      const mineIdx = initialMines.findIndex(m => m.r === r && m.c === c);
+      if (mineIdx !== -1) initialMines.splice(mineIdx, 1);
+
+      const bombIdx = initialBombs.findIndex(b => b.r === r && b.c === c);
+      if (bombIdx !== -1) initialBombs.splice(bombIdx, 1);
+
+      const spIdx = activeSpecialTiles.findIndex(t => t.r === r && t.c === c);
+      if (spIdx !== -1) activeSpecialTiles.splice(spIdx, 1);
+
+      const starIdx = activeStars.findIndex(s => s.r === r && s.c === c);
+      if (starIdx !== -1) activeStars.splice(starIdx, 1);
+
+      const ghostIdx = initialGhosts.findIndex(g => g.r === r && g.c === c);
+      if (ghostIdx !== -1) initialGhosts.splice(ghostIdx, 1);
+
+      if (goalPos && goalPos.r === r && goalPos.c === c) {
+        goalPos = null;
+      }
+    }
+
+    function clearFreeMapObjects() {
+      if (isRunning || !LEVELS[currentLevelIdx].isFreeMode) return;
+      activeObstacles = [];
+      activeWaterTiles = [];
+      activeTraps = [];
+      initialMines = [];
+      initialBombs = [];
+      activeSpecialTiles = [];
+      activeStars = [];
+      initialGhosts = [];
+      goalPos = null;
+      SFX.remove();
+      resetRobotOnly();
+      setStatus('🧹', '已清空地圖上的所有機關與終點！', 'neutral');
+    }
+
+    function handleFreeMapCellClick(r, c) {
+      if (isRunning) return;
+      const lvl = LEVELS[currentLevelIdx];
+
+      if (freeBuildTool === 'start') {
+        if (lvl.start.r === r && lvl.start.c === c) {
+          lvl.start.dir = (lvl.start.dir + 1) % 4;
+          SFX.turn();
+          setStatus('🔄', '已旋轉小車起點朝向！', 'neutral');
+        } else {
+          clearCellItems(r, c);
+          lvl.start = { r, c, dir: lvl.start.dir };
+          SFX.pop();
+          setStatus('🤖', '已移動小車起點位置！（再點一次起點可旋轉方向）', 'neutral');
+        }
+        resetRobotOnly();
+        return;
+      }
+
+      if (freeBuildTool === 'goal') {
+        if (lvl.start.r === r && lvl.start.c === c) {
+          setStatus('⚠️', '起點與終點不能放在同一格喔！', 'warn');
+          SFX.bump();
+          return;
+        }
+        if (goalPos && goalPos.r === r && goalPos.c === c) {
+          goalPos = null;
+          SFX.remove();
+          setStatus('🚩', '已移除終點站（純自由畫畫模式）。', 'neutral');
+        } else {
+          clearCellItems(r, c);
+          goalPos = { r, c };
+          SFX.pop();
+          setStatus('🚩', '已設置終點站！小車到達紅旗就會過關慶祝！', 'neutral');
+        }
+        renderMapGrid();
+        return;
+      }
+
+      // Prevent placing obstacles/traps directly on Start Pad
+      if (lvl.start.r === r && lvl.start.c === c) {
+        setStatus('⚠️', '起點格子上不能放障礙物或陷阱喔！', 'warn');
+        SFX.bump();
+        return;
+      }
+
+      if (freeBuildTool === 'erase') {
+        clearCellItems(r, c);
+        SFX.remove();
+        resetRobotOnly();
+        return;
+      }
+
+      if (freeBuildTool === 'obstacle') {
+        const exists = activeObstacles.some(o => o.r === r && o.c === c);
+        clearCellItems(r, c);
+        if (!exists) {
+          activeObstacles.push({ r, c, icon: BIOMES[currentBiome].defaultObstacles[0] });
+          SFX.pop();
+        } else {
+          SFX.remove();
+        }
+      } else if (freeBuildTool === 'water') {
+        const existing = activeWaterTiles.find(w => w.r === r && w.c === c);
+        if (existing && !existing.hasBridge && existing.kind === 'river') {
+          existing.kind = 'lake';
+          SFX.pop();
+        } else {
+          clearCellItems(r, c);
+          if (!existing) {
+            activeWaterTiles.push({ r, c, kind: 'river', hasBridge: false });
+            SFX.pop();
+          } else {
+            SFX.remove();
+          }
+        }
+      } else if (freeBuildTool === 'bridge') {
+        const existingWater = activeWaterTiles.find(w => w.r === r && w.c === c);
+        if (existingWater) {
+          existingWater.hasBridge = !existingWater.hasBridge;
+          SFX.pop();
+        } else {
+          clearCellItems(r, c);
+          activeWaterTiles.push({ r, c, kind: 'river', hasBridge: true });
+          SFX.pop();
+        }
+      } else if (freeBuildTool === 'trap') {
+        const existingTrap = activeTraps.find(t => t.r === r && t.c === c);
+        if (existingTrap && existingTrap.type === 'pit') {
+          existingTrap.type = 'web';
+          SFX.pop();
+        } else {
+          clearCellItems(r, c);
+          if (!existingTrap) {
+            activeTraps.push({ r, c, type: currentBiome === 'halloween' ? 'web' : 'pit' });
+            SFX.pop();
+          } else {
+            SFX.remove();
+          }
+        }
+      } else if (freeBuildTool === 'mine') {
+        const existingMine = initialMines.find(m => m.r === r && m.c === c);
+        clearCellItems(r, c);
+        if (!existingMine) {
+          initialMines.push({ r, c });
+          SFX.pop();
+          setStatus('🫥', '已埋下「隱形地雷」！執行程式時它會完全隱藏在場地上喔！', 'neutral');
+        } else {
+          SFX.remove();
+        }
+        resetRobotOnly();
+        return;
+      } else if (freeBuildTool === 'bomb') {
+        const existingBomb = initialBombs.find(b => b.r === r && b.c === c);
+        if (existingBomb) {
+          if (existingBomb.timer < 5) {
+            existingBomb.timer += 1;
+            SFX.pop();
+            setStatus('💣', `倒數炸彈時間已調整為 ${existingBomb.timer} 步（爆炸範圍：前後左右各 1 格）！`, 'neutral');
+          } else {
+            clearCellItems(r, c);
+            SFX.remove();
+          }
+        } else {
+          clearCellItems(r, c);
+          initialBombs.push({ r, c, timer: 3 });
+          SFX.pop();
+          setStatus('💣', '已放置「倒數炸彈（3 步）」！再點一次可增加倒數時間。', 'neutral');
+        }
+        resetRobotOnly();
+        return;
+      } else if (freeBuildTool === 'ghost') {
+        const existingGhost = initialGhosts.find(g => g.r === r && g.c === c);
+        clearCellItems(r, c);
+        if (!existingGhost) {
+          const minC = Math.max(0, c - 1);
+          const maxC = Math.min(gridSize - 1, c + 1);
+          initialGhosts.push({ r, c, axis: 'h', min: minC, max: maxC, step: 1 });
+          SFX.pop();
+          setStatus('👻', '已加入巡邏小幽靈！小車每走一步，幽靈也會巡邏一格。', 'neutral');
+        } else {
+          SFX.remove();
+        }
+        resetRobotOnly();
+        return;
+      } else if (freeBuildTool === 'weatherTile') {
+        const existingSp = activeSpecialTiles.find(t => t.r === r && t.c === c);
+        if (!existingSp) {
+          clearCellItems(r, c);
+          activeSpecialTiles.push({ r, c, type: 'ice' });
+          SFX.pop();
+        } else if (existingSp.type === 'ice') {
+          existingSp.type = 'puddle';
+          SFX.pop();
+        } else if (existingSp.type === 'puddle') {
+          existingSp.type = 'wind';
+          SFX.pop();
+        } else {
+          clearCellItems(r, c);
+          SFX.remove();
+        }
+      } else if (freeBuildTool === 'star') {
+        const exists = activeStars.some(s => s.r === r && s.c === c);
+        clearCellItems(r, c);
+        if (!exists) {
+          activeStars.push({ r, c });
+          SFX.pop();
+        } else {
+          SFX.remove();
+        }
+      }
+
+      renderMapGrid();
+    }
+
+    function renderGhosts(animate = true) {
+      const layer = document.getElementById('ghosts-layer');
+      if (!layer) return;
+      const cellPct = 100 / gridSize;
+
+      // Rebuild DOM nodes if count mismatches
+      if (layer.children.length !== activeGhosts.length) {
+        layer.innerHTML = '';
+        activeGhosts.forEach(() => {
+          const gWrap = document.createElement('div');
+          gWrap.className = 'absolute flex items-center justify-center pointer-events-none';
+          gWrap.innerHTML = `
+            <div class="w-[78%] h-[78%] rounded-full bg-purple-500/20 border-2 border-purple-300/60 flex flex-col items-center justify-center float-item shadow-md">
+              <span class="text-2xl sm:text-3xl leading-none">👻</span>
+              <span class="text-[8px] font-black text-white bg-purple-700/80 px-1 rounded leading-tight">巡邏中</span>
+            </div>
+          `;
+          layer.appendChild(gWrap);
+        });
+      }
+
+      activeGhosts.forEach((g, idx) => {
+        const el = layer.children[idx];
+        el.style.transition = animate
+          ? 'left 0.38s cubic-bezier(0.25, 1, 0.5, 1), top 0.38s cubic-bezier(0.25, 1, 0.5, 1)'
+          : 'none';
+        el.style.width = `${cellPct}%`;
+        el.style.height = `${cellPct}%`;
+        el.style.left = `${g.c * cellPct}%`;
+        el.style.top = `${g.r * cellPct}%`;
+      });
+    }
+
+    function advanceGhostsAndCheckCatch(prevRobotR, prevRobotC) {
+      if (activeGhosts.length === 0) return false;
+
+      for (let i = 0; i < activeGhosts.length; i++) {
+        const g = activeGhosts[i];
+        const prevGR = g.r;
+        const prevGC = g.c;
+
+        if (g.axis === 'h' && g.max > g.min) {
+          let nextC = g.c + g.step;
+          if (nextC > g.max || nextC < g.min) {
+            g.step = -g.step;
+            nextC = g.c + g.step;
+          }
+          g.c = nextC;
+        } else if (g.axis === 'v' && g.max > g.min) {
+          let nextR = g.r + g.step;
+          if (nextR > g.max || nextR < g.min) {
+            g.step = -g.step;
+            nextR = g.r + g.step;
+          }
+          g.r = nextR;
+        }
+
+        // Check direct collision OR head-on swap collision
+        const directHit = g.r === robotState.r && g.c === robotState.c;
+        const swapHit =
+          prevGR === robotState.r &&
+          prevGC === robotState.c &&
+          g.r === prevRobotR &&
+          g.c === prevRobotC;
+
+        if (directHit || swapHit) {
+          renderGhosts(true);
+          triggerBumpAnimation();
+          SFX.ghost();
+          setStatus('👻', '哎呀！被巡邏的小幽靈捉到了！試試看加一塊「🎵 音樂」原地等它走過，或換條路線吧！', 'error');
+          return true;
+        }
+      }
+
+      renderGhosts(true);
+      return false;
+    }
+
+    function updateRobotPosition(animate = true) {
+      const bot = document.getElementById('matatabot');
+      const rotator = document.getElementById('matatabot-rotator');
+      const cellPct = 100 / gridSize;
+
+      if (!animate) {
+        bot.style.transition = 'none';
+        rotator.style.transition = 'none';
+      } else {
+        bot.style.transition = 'left 0.42s cubic-bezier(0.25, 1, 0.5, 1), top 0.42s cubic-bezier(0.25, 1, 0.5, 1)';
+        rotator.style.transition = 'transform 0.38s cubic-bezier(0.34, 1.4, 0.64, 1)';
+      }
+
+      bot.style.width = `${cellPct}%`;
+      bot.style.height = `${cellPct}%`;
+      bot.style.left = `${robotState.c * cellPct}%`;
+      bot.style.top = `${robotState.r * cellPct}%`;
+      rotator.style.transform = `rotate(${robotState.visualDeg}deg)`;
+
+      if (!animate) {
+        // Force reflow
+        void bot.offsetWidth;
+      }
+    }
+
+    function setHappyEyes(happy) {
+      document.getElementById('robot-eyes-normal').classList.toggle('hidden', happy);
+      document.getElementById('robot-eyes-happy').classList.toggle('hidden', !happy);
+    }
+
+    // ==========================================
+    // 5. PEN DRAWING MODE (FREE MODE)
+    // ==========================================
+    function togglePenMode() {
+      penEnabled = !penEnabled;
+      const btn = document.getElementById('pen-toggle-btn');
+      const statusTxt = document.getElementById('pen-status-text');
+      const colorsDiv = document.getElementById('pen-colors');
+
+      if (penEnabled) {
+        btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition flex items-center gap-1.5 bg-amber-100 border-amber-400 text-amber-900';
+        statusTxt.textContent = '畫筆：開';
+        colorsDiv.classList.remove('hidden');
+        colorsDiv.classList.add('flex');
+        setPenColor(penColor);
+        SFX.pop();
+      } else {
+        btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition flex items-center gap-1.5 bg-slate-100 border-slate-200 text-slate-700';
+        statusTxt.textContent = '畫筆：關';
+        colorsDiv.classList.add('hidden');
+        colorsDiv.classList.remove('flex');
+      }
+    }
+
+    function setPenColor(hex) {
+      penColor = hex;
+      document.querySelectorAll('#pen-colors button').forEach(b => {
+        if (b.dataset.color === hex) {
+          b.classList.add('ring-slate-700', 'scale-110');
+        } else {
+          b.classList.remove('ring-slate-700', 'scale-110');
+        }
+      });
+    }
+
+    function clearDrawing() {
+      penSegments = [];
+      renderPenLines();
+      SFX.remove();
+    }
+
+    function addPenSegment(r1, c1, r2, c2) {
+      if (!penEnabled) return;
+      const step = 100 / gridSize;
+      penSegments.push({
+        x1: (c1 + 0.5) * step,
+        y1: (r1 + 0.5) * step,
+        x2: (c2 + 0.5) * step,
+        y2: (r2 + 0.5) * step,
+        color: penColor
+      });
+      renderPenLines();
+    }
+
+    function renderPenLines() {
+      const svg = document.getElementById('pen-svg-layer');
+      svg.innerHTML = penSegments
+        .map(
+          seg =>
+            `<line x1="${seg.x1}" y1="${seg.y1}" x2="${seg.x2}" y2="${seg.y2}" stroke="${seg.color}" stroke-width="2.6" stroke-linecap="round" opacity="0.88" />`
+        )
+        .join('');
+    }
+
+    // ==========================================
+    // 6. CONTROL BOARD & BLOCK INTERACTION
+    // ==========================================
+    function renderControlBoard() {
+      const board = document.getElementById('control-board');
+      board.innerHTML = '';
+
+      let usedCount = 0;
+
+      for (let i = 0; i < MAX_SLOTS; i++) {
+        const block = slots[i];
+        if (block) usedCount++;
+
+        const slotEl = document.createElement('div');
+        slotEl.id = `board-slot-${i}`;
+        const isSelected = selectedSlotIdx === i;
+
+        slotEl.className = `relative min-h-[74px] sm:min-h-[82px] rounded-xl border-2 flex flex-col items-center justify-center p-1 transition-all ${
+          block
+            ? 'bg-white border-slate-200 shadow-xs'
+            : isSelected
+            ? 'bg-orange-50/60 border-orange-400 border-dashed'
+            : 'bg-slate-50/80 border-slate-300/80 border-dashed hover:border-slate-400'
+        }`;
+
+        // Drag & Drop handlers on slot
+        slotEl.ondragover = e => {
+          e.preventDefault();
+          slotEl.classList.add('border-orange-400', 'bg-orange-50/70');
+        };
+        slotEl.ondragleave = () => {
+          slotEl.classList.remove('border-orange-400', 'bg-orange-50/70');
+        };
+        slotEl.ondrop = e => handleSlotDrop(e, i);
+
+        // Slot sequence number & reading flow arrow
+        const numTag = document.createElement('span');
+        numTag.className = 'absolute top-1 left-1.5 text-[9px] font-black text-slate-400 pointer-events-none';
+        numTag.textContent = i + 1;
+        slotEl.appendChild(numTag);
+
+        if ((i + 1) % 4 !== 0 && i < MAX_SLOTS - 1) {
+          const arrow = document.createElement('span');
+          arrow.className = 'hidden sm:block absolute -right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 z-20 pointer-events-none';
+          arrow.textContent = '→';
+          slotEl.appendChild(arrow);
+        }
+
+        if (!block) {
+          // Empty slot click selects target slot
+          slotEl.onclick = () => {
+            if (isRunning) return;
+            selectedSlotIdx = i;
+            renderControlBoard();
+          };
+          const plusHint = document.createElement('span');
+          plusHint.className = 'text-slate-300 text-lg font-black pointer-events-none';
+          plusHint.textContent = '+';
+          slotEl.appendChild(plusHint);
+        } else {
+          const info = BLOCK_INFO[block.type];
+
+          // Main Toy Block Visual
+          const blockDiv = document.createElement('div');
+          blockDiv.draggable = !isRunning;
+          blockDiv.ondragstart = e => {
+            e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'board', index: i }));
+          };
+          blockDiv.onclick = e => {
+            e.stopPropagation();
+            if (isRunning) return;
+            selectedSlotIdx = i;
+            // Tap repeatable block cycles multiplier 1 -> 2 -> 3 -> 4 -> 5 -> 1
+            if (info.repeatable) {
+              block.count = (block.count % 5) + 1;
+              SFX.pop();
+            }
+            renderControlBoard();
+          };
+
+          blockDiv.className = `toy-block w-full rounded-lg ${info.bg} ${info.text} py-1.5 px-1 flex flex-col items-center justify-center cursor-pointer relative ${
+            isSelected ? 'ring-2 ring-offset-1 ring-orange-500' : ''
+          }`;
+          blockDiv.innerHTML = `
+            <span class="text-sm sm:text-base font-black leading-none">${info.icon}</span>
+            <span class="text-[10px] sm:text-[11px] font-black mt-0.5 leading-none">${info.label}</span>
+          `;
+
+          // Delete button (top-right corner)
+          const delBtn = document.createElement('button');
+          delBtn.className = 'absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-800 hover:bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-sm z-20';
+          delBtn.textContent = '✕';
+          delBtn.title = '移除這塊積木';
+          delBtn.onclick = e => {
+            e.stopPropagation();
+            if (isRunning) return;
+            slots[i] = null;
+            if (selectedSlotIdx === i) selectedSlotIdx = null;
+            SFX.remove();
+            renderControlBoard();
+          };
+
+          slotEl.appendChild(blockDiv);
+          slotEl.appendChild(delBtn);
+
+          // Attached Number Multiplier Block Underneath (Matatalab style!)
+          if (block.count > 1) {
+            const numBlock = document.createElement('div');
+            numBlock.className = 'mt-1 w-[82%] py-0.5 rounded-md bg-amber-400 border-b-2 border-amber-600 text-amber-950 text-[11px] font-black text-center leading-none shadow-xs';
+            numBlock.textContent = `× ${block.count}`;
+            slotEl.appendChild(numBlock);
+          }
+        }
+
+        board.appendChild(slotEl);
+      }
+
+      document.getElementById('block-counter').textContent = `${usedCount} / ${MAX_SLOTS} 塊`;
+    }
+
+    function handlePaletteClick(type) {
+      if (isRunning) return;
+      let targetIdx = selectedSlotIdx !== null && slots[selectedSlotIdx] === null
+        ? selectedSlotIdx
+        : slots.findIndex(s => s === null);
+
+      if (targetIdx === -1) {
+        setStatus('⚠️', '控制板已經放滿 16 塊積木囉！可以先移除不需要的積木。', 'warn');
+        SFX.bump();
+        return;
+      }
+
+      slots[targetIdx] = { type, count: 1 };
+      selectedSlotIdx = targetIdx;
+      SFX.pop();
+      renderControlBoard();
+    }
+
+    function handleNumberClick(num) {
+      if (isRunning) return;
+      // Find target repeatable block: selected slot first, else last placed repeatable block
+      let targetIdx = -1;
+      if (selectedSlotIdx !== null && slots[selectedSlotIdx] && BLOCK_INFO[slots[selectedSlotIdx].type].repeatable) {
+        targetIdx = selectedSlotIdx;
+      } else {
+        for (let i = MAX_SLOTS - 1; i >= 0; i--) {
+          if (slots[i] && BLOCK_INFO[slots[i].type].repeatable) {
+            targetIdx = i;
+            break;
+          }
+        }
+      }
+
+      if (targetIdx === -1) {
+        setStatus('💡', '請先放一塊「前進、轉彎或循環」積木，再疊加數字積木喔！', 'warn');
+        SFX.bump();
+        return;
+      }
+
+      slots[targetIdx].count = num;
+      selectedSlotIdx = targetIdx;
+      SFX.pop();
+      renderControlBoard();
+    }
+
+    // Drag & Drop Support
+    function handlePaletteDragStart(e, type) {
+      e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'palette', type }));
+    }
+
+    function handleNumberDragStart(e, num) {
+      e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'number', count: num }));
+    }
+
+    function handleSlotDrop(e, targetIdx) {
+      e.preventDefault();
+      if (isRunning) return;
+      try {
+        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+        if (data.source === 'palette') {
+          slots[targetIdx] = { type: data.type, count: 1 };
+          selectedSlotIdx = targetIdx;
+          SFX.pop();
+        } else if (data.source === 'number') {
+          if (slots[targetIdx] && BLOCK_INFO[slots[targetIdx].type].repeatable) {
+            slots[targetIdx].count = data.count;
+            selectedSlotIdx = targetIdx;
+            SFX.pop();
+          } else {
+            setStatus('💡', '數字積木要疊放在「前進、轉彎或循環」積木上喔！', 'warn');
+            SFX.bump();
+          }
+        } else if (data.source === 'board') {
+          const fromIdx = data.index;
+          if (fromIdx !== targetIdx) {
+            const temp = slots[targetIdx];
+            slots[targetIdx] = slots[fromIdx];
+            slots[fromIdx] = temp;
+            selectedSlotIdx = targetIdx;
+            SFX.pop();
+          }
+        }
+        renderControlBoard();
+      } catch (err) {
+        // Ignore malformed drops
+      }
+    }
+
+    function clearBoard() {
+      if (isRunning) return;
+      slots = new Array(MAX_SLOTS).fill(null);
+      selectedSlotIdx = null;
+      SFX.remove();
+      renderControlBoard();
+      resetRobotOnly();
+    }
+
+    // ==========================================
+    // 7. COMPILER & EXECUTION ENGINE
+    // ==========================================
+    function compileProgram() {
+      // Compact non-null slots while remembering original board slot indices
+      const sequence = [];
+      for (let i = 0; i < MAX_SLOTS; i++) {
+        if (slots[i]) {
+          sequence.push({ ...slots[i], slotIdx: i });
+        }
+      }
+
+      if (sequence.length === 0) {
+        return { error: '控制板上還沒有積木喔！請先點擊或拖拉積木放上去。' };
+      }
+
+      // Validate matching Loop Start & Loop End brackets
+      const bracketStack = [];
+      for (let i = 0; i < sequence.length; i++) {
+        const item = sequence[i];
+        if (item.type === 'loop_start') {
+          bracketStack.push(item);
+        } else if (item.type === 'loop_end') {
+          if (bracketStack.length === 0) {
+            return {
+              error: '發現多出來的「循環結束】🔁」，前面要先放「循環開始🔁【」喔！',
+              errorSlot: item.slotIdx
+            };
+          }
+          bracketStack.pop();
+        }
+      }
+      if (bracketStack.length > 0) {
+        const unclosed = bracketStack[bracketStack.length - 1];
+        return {
+          error: '放了「循環開始🔁【」，最後面記得也要放「循環結束】🔁」把它包起來喔！',
+          errorSlot: unclosed.slotIdx
+        };
+      }
+
+      // Unroll loops & multipliers into atomic step list
+      const atomicSteps = [];
+      const loopRuntimeStack = [];
+      let ip = 0;
+      const SAFETY_LIMIT = 80;
+
+      while (ip < sequence.length) {
+        if (atomicSteps.length > SAFETY_LIMIT) {
+          return { error: '步驟太多啦！請減少循環次數再試一次。' };
+        }
+
+        const cmd = sequence[ip];
+        if (cmd.type === 'loop_start') {
+          loopRuntimeStack.push({
+            startIp: ip,
+            remaining: cmd.count
+          });
+          ip++;
+        } else if (cmd.type === 'loop_end') {
+          const top = loopRuntimeStack[loopRuntimeStack.length - 1];
+          top.remaining--;
+          if (top.remaining > 0) {
+            ip = top.startIp + 1;
+          } else {
+            loopRuntimeStack.pop();
+            ip++;
+          }
+        } else {
+          // Repeatable atomic action (forward, backward, left, right, dance, music)
+          for (let k = 0; k < cmd.count; k++) {
+            atomicSteps.push({
+              action: cmd.type,
+              slotIdx: cmd.slotIdx
+            });
+          }
+          ip++;
+        }
+      }
+
+      if (atomicSteps.length === 0) {
+        return { error: '循環裡面還沒有放入動作積木喔！' };
+      }
+
+      return { steps: atomicSteps, totalBlocksUsed: sequence.length };
+    }
+
+    async function runProgram() {
+      if (isRunning) return;
+
+      const compiled = compileProgram();
+      if (compiled.error) {
+        setStatus('🤔', compiled.error, 'error');
+        SFX.bump();
+        if (compiled.errorSlot !== undefined) {
+          highlightSlot(compiled.errorSlot);
+          setTimeout(clearExecutingHighlight, 1800);
+        }
+        return;
+      }
+
+      // Reset robot to start before running full sequence
+      resetRobotOnly();
+      isRunning = true;
+      stopRequested = false;
+
+      // Toggle UI to Running State
+      document.getElementById('play-btn').classList.add('hidden');
+      document.getElementById('stop-btn').classList.remove('hidden');
+      document.getElementById('clear-btn').disabled = true;
+      document.getElementById('tower-scan-beam').classList.remove('hidden');
+      const led = document.getElementById('tower-led');
+      led.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_10px_#fbbf24] animate-ping';
+      document.getElementById('tower-status').textContent = '指令塔正在掃描並發送藍牙指令...';
+
+      SFX.scan();
+      setStatus('📡', '指令塔掃描完成！瑪塔小車開始出發...', 'running');
+      await sleep(450);
+
+      let didDanceOrMusic = false;
+      const stepDelay = slowMode ? 880 : 540;
+
+      for (let s = 0; s < compiled.steps.length; s++) {
+        if (stopRequested) break;
+
+        const step = compiled.steps[s];
+        highlightSlot(step.slotIdx);
+
+        const success = await executeSingleStep(step.action);
+        if (step.action === 'dance' || step.action === 'music') {
+          didDanceOrMusic = true;
+        }
+
+        if (!success) {
+          // Hit wall or obstacle -> stop execution cleanly for debugging
+          finishExecutionState();
+          return;
+        }
+
+        await sleep(stepDelay);
+      }
+
+      clearExecutingHighlight();
+      finishExecutionState();
+
+      if (stopRequested) {
+        setStatus('⏹️', '已停止執行。你可以調整積木後再試一次！', 'neutral');
+        return;
+      }
+
+      // Evaluate Level Goal
+      const lvl = LEVELS[currentLevelIdx];
+      if (lvl.isFreeMode && !goalPos) {
+        setStatus('🎨', '程式執行完畢！你可以繼續修改積木，或點「🚩 設終點」來挑戰闖關。', 'success');
+        return;
+      }
+
+      const atGoal = goalPos && robotState.r === goalPos.r && robotState.c === goalPos.c;
+      const allStarsCollected = collectedStars.size === activeStars.length;
+
+      if (atGoal) {
+        if (lvl.requireFun && !didDanceOrMusic) {
+          setStatus('🎵', '到達紅旗了！不過別忘了放上「演奏音樂」或「跳舞」積木喔！', 'warn');
+          SFX.bump();
+          return;
+        }
+        if (!allStarsCollected) {
+          setStatus('⭐', '到達紅旗了！但地圖上還有星星沒收集到，再試試看！', 'warn');
+          SFX.bump();
+          return;
+        }
+
+        // Victory!
+        if (!lvl.isFreeMode) {
+          completedLevels.add(currentLevelIdx);
+          renderLevelPills();
+        }
+        setHappyEyes(true);
+        SFX.win();
+        launchConfetti();
+        showVictoryModal(compiled.totalBlocksUsed, lvl.par);
+      } else {
+        setStatus('🧐', '程式走完了，但還沒到達紅旗喔！看看還差幾步或哪裡需要轉彎？', 'warn');
+        SFX.bump();
+      }
+    }
+
+    async function executeSingleStep(action) {
+      const dr = [-1, 0, 1, 0];
+      const dc = [0, 1, 0, -1];
+      const prevRobotR = robotState.r;
+      const prevRobotC = robotState.c;
+
+      if (action === 'forward' || action === 'backward') {
+        const sign = action === 'forward' ? 1 : -1;
+        const stepDr = dr[robotState.dir] * sign;
+        const stepDc = dc[robotState.dir] * sign;
+        const nextR = robotState.r + stepDr;
+        const nextC = robotState.c + stepDc;
+        const label = action === 'forward' ? '前進 1 格' : '後退 1 格';
+
+        // Boundary Check
+        if (nextR < 0 || nextR >= gridSize || nextC < 0 || nextC >= gridSize) {
+          triggerBumpAnimation();
+          SFX.bump();
+          setStatus('💥', `哎呀！執行「${label}」時走到地圖外面去了，檢查一下積木吧！`, 'error');
+          return false;
+        }
+
+        // Obstacle Check
+        if (activeObstacles.some(o => o.r === nextR && o.c === nextC)) {
+          triggerBumpAnimation();
+          SFX.bump();
+          setStatus('💥', `哎呀！執行「${label}」時撞到障礙物了，試著繞路看看！`, 'error');
+          return false;
+        }
+
+        // River / Lake Water Check (Passable if Bridge is built OR Snow weather froze the water!)
+        const waterTile = activeWaterTiles.find(w => w.r === nextR && w.c === nextC);
+        if (waterTile && !waterTile.hasBridge && currentWeather !== 'snow') {
+          triggerBumpAnimation();
+          SFX.splash();
+          setStatus('🌊', `哎呀！前面是深深的${waterTile.kind === 'lake' ? '湖泊' : '河流'}，沒有「🌉 木橋」也沒有結冰，小車不能下水喔！`, 'error');
+          return false;
+        }
+
+        // Rainy Puddle Check
+        const puddleTile = activeSpecialTiles.find(t => t.r === nextR && t.c === nextC && t.type === 'puddle');
+        if (puddleTile && currentWeather === 'rain') {
+          triggerBumpAnimation();
+          SFX.splash();
+          setStatus('💦', '哎呀！下雨天水窪積滿了雨水，小車過不去，請繞道而行！', 'error');
+          return false;
+        }
+
+        // Unexploded Countdown Bomb Solid Check
+        const bombBlock = activeBombs.find(b => !b.exploded && b.r === nextR && b.c === nextC);
+        if (bombBlock) {
+          triggerBumpAnimation();
+          SFX.bump();
+          setStatus('💣', '前面有一顆正在倒數的炸彈，不能直接壓過去喔！', 'error');
+          return false;
+        }
+
+        // Draw pen line if enabled
+        addPenSegment(robotState.r, robotState.c, nextR, nextC);
+
+        robotState.r = nextR;
+        robotState.c = nextC;
+        updateRobotPosition(true);
+        SFX.step();
+        setStatus('🤖', `正在執行：${label}`, 'running');
+        collectStarAt(nextR, nextC);
+
+        // Hidden Landmine Check
+        if (checkAndTriggerLandmine(robotState.r, robotState.c)) return false;
+
+        // Trap Check (Pitfall / Spiderweb)
+        const trapTile = activeTraps.find(t => t.r === robotState.r && t.c === robotState.c);
+        if (trapTile) {
+          triggerBumpAnimation();
+          SFX.bump();
+          setStatus(
+            trapTile.type === 'web' ? '🕸️' : '🕳️',
+            trapTile.type === 'web'
+              ? '哎呀！小車被「蜘蛛網陷阱」黏住動不了啦！請繞開它吧！'
+              : '哎呀！小車掉進「陷阱坑」裡啦！檢查路線避開陷阱吧！',
+            'error'
+          );
+          return false;
+        }
+
+        // Environmental Weather Trigger: Ice Slide (Snowy)
+        const iceTile = activeSpecialTiles.find(t => t.r === robotState.r && t.c === robotState.c && t.type === 'ice');
+        if (iceTile && currentWeather === 'snow') {
+          const slideR = robotState.r + stepDr;
+          const slideC = robotState.c + stepDc;
+          const slideBlockedByPuddle =
+            currentWeather === 'rain' &&
+            activeSpecialTiles.some(t => t.r === slideR && t.c === slideC && t.type === 'puddle');
+          const slideBlockedByWater = activeWaterTiles.some(
+            w => w.r === slideR && w.c === slideC && !w.hasBridge && currentWeather !== 'snow'
+          );
+          const slideBlockedByBomb = activeBombs.some(
+            b => !b.exploded && b.r === slideR && b.c === slideC
+          );
+          const canSlide =
+            slideR >= 0 &&
+            slideR < gridSize &&
+            slideC >= 0 &&
+            slideC < gridSize &&
+            !slideBlockedByPuddle &&
+            !slideBlockedByWater &&
+            !slideBlockedByBomb &&
+            !activeObstacles.some(o => o.r === slideR && o.c === slideC);
+
+          if (canSlide) {
+            await sleep(320);
+            addPenSegment(robotState.r, robotState.c, slideR, slideC);
+            robotState.r = slideR;
+            robotState.c = slideC;
+            updateRobotPosition(true);
+            SFX.slide();
+            setStatus('🧊', '飄雪結冰！小車在冰塊上向前滑行了 1 格！', 'running');
+            collectStarAt(slideR, slideC);
+
+            if (checkAndTriggerLandmine(slideR, slideC)) return false;
+
+            const slideTrap = activeTraps.find(t => t.r === slideR && t.c === slideC);
+            if (slideTrap) {
+              triggerBumpAnimation();
+              SFX.bump();
+              setStatus(
+                slideTrap.type === 'web' ? '🕸️' : '🕳️',
+                slideTrap.type === 'web'
+                  ? '哎呀！滑冰後被「蜘蛛網陷阱」黏住動不了啦！'
+                  : '哎呀！滑冰後掉進「陷阱坑」裡啦！',
+                'error'
+              );
+              return false;
+            }
+          }
+        }
+
+        // Environmental Weather Trigger: Wind Gust (Windy -> pushes East +1)
+        const windTile = activeSpecialTiles.find(t => t.r === robotState.r && t.c === robotState.c && t.type === 'wind');
+        if (windTile && currentWeather === 'wind') {
+          const windR = robotState.r;
+          const windC = robotState.c + 1;
+          const windBlockedByPuddle =
+            currentWeather === 'rain' &&
+            activeSpecialTiles.some(t => t.r === windR && t.c === windC && t.type === 'puddle');
+          const windBlockedByWater = activeWaterTiles.some(
+            w => w.r === windR && w.c === windC && !w.hasBridge && currentWeather !== 'snow'
+          );
+          const windBlockedByBomb = activeBombs.some(
+            b => !b.exploded && b.r === windR && b.c === windC
+          );
+          const canBlow =
+            windC >= 0 &&
+            windC < gridSize &&
+            !windBlockedByPuddle &&
+            !windBlockedByWater &&
+            !windBlockedByBomb &&
+            !activeObstacles.some(o => o.r === windR && o.c === windC);
+
+          if (canBlow) {
+            await sleep(320);
+            addPenSegment(robotState.r, robotState.c, windR, windC);
+            robotState.r = windR;
+            robotState.c = windC;
+            updateRobotPosition(true);
+            SFX.wind();
+            setStatus('🌬️', '強風吹來！順風口把小車往右吹動了 1 格！', 'running');
+            collectStarAt(windR, windC);
+
+            if (checkAndTriggerLandmine(windR, windC)) return false;
+
+            const windTrap = activeTraps.find(t => t.r === windR && t.c === windC);
+            if (windTrap) {
+              triggerBumpAnimation();
+              SFX.bump();
+              setStatus(
+                windTrap.type === 'web' ? '🕸️' : '🕳️',
+                windTrap.type === 'web'
+                  ? '哎呀！被風吹進「蜘蛛網陷阱」黏住動不了啦！'
+                  : '哎呀！被風吹進「陷阱坑」裡啦！',
+                'error'
+              );
+              return false;
+            }
+          }
+        }
+
+        if (await tickBombsAndCheckBlast()) return false;
+        if (advanceGhostsAndCheckCatch(prevRobotR, prevRobotC)) return false;
+        return true;
+      }
+
+      if (action === 'left') {
+        robotState.dir = (robotState.dir + 3) % 4;
+        robotState.visualDeg -= 90;
+        updateRobotPosition(true);
+        SFX.turn();
+        setStatus('↪️', '正在執行：原地左轉 90°', 'running');
+        if (await tickBombsAndCheckBlast()) return false;
+        if (advanceGhostsAndCheckCatch(prevRobotR, prevRobotC)) return false;
+        return true;
+      }
+
+      if (action === 'right') {
+        robotState.dir = (robotState.dir + 1) % 4;
+        robotState.visualDeg += 90;
+        updateRobotPosition(true);
+        SFX.turn();
+        setStatus('↩️', '正在執行：原地右轉 90°', 'running');
+        if (await tickBombsAndCheckBlast()) return false;
+        if (advanceGhostsAndCheckCatch(prevRobotR, prevRobotC)) return false;
+        return true;
+      }
+
+      if (action === 'dance') {
+        const rotator = document.getElementById('matatabot-rotator');
+        setHappyEyes(true);
+        rotator.classList.add('animate-dance');
+        SFX.melody();
+        setStatus('💃', '正在執行：開心跳舞慶祝！', 'running');
+        setTimeout(() => {
+          rotator.classList.remove('animate-dance');
+          if (!completedLevels.has(currentLevelIdx)) setHappyEyes(false);
+        }, 760);
+        if (await tickBombsAndCheckBlast()) return false;
+        if (advanceGhostsAndCheckCatch(prevRobotR, prevRobotC)) return false;
+        return true;
+      }
+
+      if (action === 'music') {
+        setHappyEyes(true);
+        SFX.melody();
+        setStatus('🎵', '正在執行：演奏快樂旋律 Do-Re-Mi-Sol-Do！', 'running');
+        setTimeout(() => {
+          if (!completedLevels.has(currentLevelIdx)) setHappyEyes(false);
+        }, 650);
+        if (await tickBombsAndCheckBlast()) return false;
+        if (advanceGhostsAndCheckCatch(prevRobotR, prevRobotC)) return false;
+        return true;
+      }
+
+      return true;
+    }
+
+    function checkAndTriggerLandmine(r, c) {
+      const mine = activeMines.find(m => !m.triggered && m.r === r && m.c === c);
+      if (!mine) return false;
+      mine.triggered = true;
+      renderMapGrid();
+      triggerBumpAnimation();
+      SFX.explosion();
+      setStatus('💥', '轟隆！踩到場地上隱藏的「地雷」了！記住這個位置，換條路繞過去吧！', 'error');
+      return true;
+    }
+
+    async function tickBombsAndCheckBlast() {
+      const unexploded = activeBombs.filter(b => !b.exploded);
+      if (unexploded.length === 0) return false;
+
+      const detonatingBombs = [];
+      unexploded.forEach(b => {
+        b.timer -= 1;
+        if (b.timer <= 0) {
+          b.exploded = true;
+          detonatingBombs.push(b);
+        }
+      });
+
+      renderMapGrid();
+
+      if (detonatingBombs.length === 0) return false;
+
+      // Compute all cross-shaped blast cells (center + Up/Down/Left/Right 1 tile)
+      const blastCells = [];
+      detonatingBombs.forEach(b => {
+        getBombCrossCells(b.r, b.c).forEach(pt => blastCells.push(pt));
+      });
+
+      explosionFlashCells = blastCells;
+      SFX.explosion();
+      renderMapGrid();
+
+      const hitRobot = blastCells.some(pt => pt.r === robotState.r && pt.c === robotState.c);
+
+      await sleep(380);
+      explosionFlashCells = [];
+      renderMapGrid();
+
+      if (hitRobot) {
+        triggerBumpAnimation();
+        setStatus('💥', '轟隆！倒數炸彈時間到爆炸了，前後左右一格的小車被波及啦！', 'error');
+        return true;
+      }
+
+      setStatus('💨', '倒數炸彈在遠處爆炸了！好險小車不在前後左右一格範圍內！', 'running');
+      return false;
+    }
+
+    function collectStarAt(r, c) {
+      const starIdx = activeStars.findIndex(s => s.r === r && s.c === c);
+      if (starIdx !== -1 && !collectedStars.has(starIdx)) {
+        collectedStars.add(starIdx);
+        SFX.star();
+        renderMapGrid();
+      }
+    }
+
+    function triggerBumpAnimation() {
+      const bot = document.getElementById('matatabot');
+      bot.classList.add('animate-bump');
+      setTimeout(() => bot.classList.remove('animate-bump'), 380);
+    }
+
+    function stopProgram() {
+      if (isRunning) {
+        stopRequested = true;
+      }
+      finishExecutionState();
+      clearExecutingHighlight();
+    }
+
+    function finishExecutionState() {
+      isRunning = false;
+      document.getElementById('play-btn').classList.remove('hidden');
+      document.getElementById('stop-btn').classList.add('hidden');
+      document.getElementById('clear-btn').disabled = false;
+      document.getElementById('tower-scan-beam').classList.add('hidden');
+      const led = document.getElementById('tower-led');
+      led.className = 'w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8] transition-colors';
+      document.getElementById('tower-status').textContent = '藍燈常亮：藍牙已連接小車，由上至下、左至右執行';
+    }
+
+    function highlightSlot(slotIdx) {
+      clearExecutingHighlight();
+      const el = document.getElementById(`board-slot-${slotIdx}`);
+      if (el) el.classList.add('executing-slot');
+    }
+
+    function clearExecutingHighlight() {
+      document.querySelectorAll('.executing-slot').forEach(el => el.classList.remove('executing-slot'));
+    }
+
+    function toggleSpeed() {
+      slowMode = !slowMode;
+      document.getElementById('speed-icon').textContent = slowMode ? '🐢' : '🐇';
+      document.getElementById('speed-label').textContent = slowMode ? '慢動作觀察' : '正常速度';
+      SFX.pop();
+    }
+
+    function setStatus(icon, text, tone = 'neutral') {
+      const banner = document.getElementById('status-banner');
+      document.getElementById('status-icon').textContent = icon;
+      document.getElementById('status-text').textContent = text;
+
+      const styles = {
+        neutral: 'bg-slate-100 border-slate-200 text-slate-700',
+        running: 'bg-sky-50 border-sky-200 text-sky-800',
+        warn:    'bg-amber-50 border-amber-300 text-amber-900',
+        error:   'bg-rose-50 border-rose-300 text-rose-800',
+        success: 'bg-emerald-50 border-emerald-300 text-emerald-800'
+      };
+      banner.className = `w-full mt-3 px-4 py-2.5 rounded-2xl border flex items-center justify-between gap-2 text-xs sm:text-sm font-bold transition-colors ${styles[tone] || styles.neutral}`;
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // ==========================================
+    // 7.5 DYNAMIC WEATHER PARTICLE RENDERER
+    // ==========================================
+    function startWeatherLoop() {
+      const canvas = document.getElementById('weather-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      const particles = Array.from({ length: 42 }, () => ({
+        x: Math.random(),
+        y: Math.random(),
+        speed: 0.004 + Math.random() * 0.008,
+        size: 2 + Math.random() * 3.5,
+        drift: (Math.random() - 0.5) * 0.003
+      }));
+
+      function renderWeatherFrame() {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width > 0 && (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height))) {
+          canvas.width = Math.floor(rect.width);
+          canvas.height = Math.floor(rect.height);
+        }
+
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        if (currentWeather === 'sunny') {
+          // Warm Golden Sunbeam Glow at top-right corner
+          const grad = ctx.createRadialGradient(w * 0.92, h * 0.08, 5, w * 0.92, h * 0.08, w * 0.45);
+          grad.addColorStop(0, 'rgba(253, 224, 71, 0.36)');
+          grad.addColorStop(1, 'rgba(253, 224, 71, 0)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+        } else if (currentWeather === 'snow') {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          particles.forEach(p => {
+            p.y += p.speed * 0.7;
+            p.x += Math.sin(p.y * 12) * 0.0015;
+            if (p.y > 1) { p.y = -0.02; p.x = Math.random(); }
+            ctx.beginPath();
+            ctx.arc(p.x * w, p.y * h, p.size, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        } else if (currentWeather === 'rain') {
+          ctx.strokeStyle = 'rgba(59, 130, 246, 0.55)';
+          ctx.lineWidth = 2;
+          ctx.lineCap = 'round';
+          particles.forEach(p => {
+            p.y += p.speed * 2.4;
+            p.x -= p.speed * 0.5;
+            if (p.y > 1) { p.y = -0.05; p.x = Math.random() * 1.1; }
+            ctx.beginPath();
+            ctx.moveTo(p.x * w, p.y * h);
+            ctx.lineTo(p.x * w - 4, p.y * h + 12);
+            ctx.stroke();
+          });
+        } else if (currentWeather === 'wind') {
+          ctx.strokeStyle = 'rgba(20, 184, 166, 0.42)';
+          ctx.lineWidth = 2.2;
+          ctx.lineCap = 'round';
+          particles.forEach((p, idx) => {
+            p.x += p.speed * 2.2;
+            p.y += Math.sin(p.x * 10 + idx) * 0.002;
+            if (p.x > 1.05) { p.x = -0.08; p.y = Math.random(); }
+            ctx.beginPath();
+            ctx.moveTo(p.x * w, p.y * h);
+            ctx.lineTo(p.x * w + 22, p.y * h);
+            ctx.stroke();
+          });
+        }
+
+        requestAnimationFrame(renderWeatherFrame);
+      }
+
+      requestAnimationFrame(renderWeatherFrame);
+    }
+
+    // ==========================================
+    // 8. MODALS & CONFETTI CELEBRATION
+    // ==========================================
+    function showVictoryModal(blocksUsed, par) {
+      const modal = document.getElementById('victory-modal');
+      const tip = document.getElementById('efficiency-tip');
+      const starsDiv = document.getElementById('victory-stars');
+      const nextBtn = document.getElementById('next-level-btn');
+
+      if (par && blocksUsed <= par) {
+        starsDiv.innerHTML = '<span>⭐</span><span>⭐</span><span>⭐</span>';
+        tip.textContent = `太厲害了！你只用了 ${blocksUsed} 塊積木就過關，拿到滿分 3 顆星！`;
+      } else {
+        starsDiv.innerHTML = '<span>⭐</span><span>⭐</span><span class="opacity-30">⭐</span>';
+        tip.textContent = `過關成功！你用了 ${blocksUsed} 塊積木（試試看用數字或循環積木減少到 ${par} 塊以內吧！）`;
+      }
+
+      if (currentLevelIdx >= LEVELS.length - 1) {
+        nextBtn.textContent = '自由畫畫模式 🎨';
+      } else {
+        nextBtn.textContent = '下一關 ➔';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeVictoryModal() {
+      document.getElementById('victory-modal').classList.add('hidden');
+    }
+
+    function nextLevel() {
+      closeVictoryModal();
+      const nextIdx = (currentLevelIdx + 1) % LEVELS.length;
+      loadLevel(nextIdx);
+    }
+
+    function openHelpModal() {
+      SFX.pop();
+      document.getElementById('help-modal').classList.remove('hidden');
+    }
+
+    function closeHelpModal() {
+      document.getElementById('help-modal').classList.add('hidden');
+    }
+
+    // Lightweight Confetti Effect
+    function launchConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const colors = ['#FF6B00', '#FACC15', '#10B981', '#3B82F6', '#EC4899'];
+      const particles = Array.from({ length: 75 }, () => ({
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * 120,
+        r: 5 + Math.random() * 6,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vx: (Math.random() - 0.5) * 4,
+        vy: 3 + Math.random() * 4,
+        rot: Math.random() * 360
+      }));
+
+      let frame = 0;
+      function animateConfetti() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += 5;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rot * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 1.4);
+          ctx.restore();
+        });
+        frame++;
+        if (frame < 110) {
+          requestAnimationFrame(animateConfetti);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      animateConfetti();
+    }
+
+    // Start App on Window Load
+    window.onload = init;
+  </script>
+</body>
+</html>
